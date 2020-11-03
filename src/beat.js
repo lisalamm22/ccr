@@ -5,7 +5,7 @@ const DEFAULTS = {
   SEQ: "",
   ACTIVE: false,
   COLOR: "blue",
-  RADIUS: 10,
+  RADIUS: 50,
 };
 
 function Beat(options){

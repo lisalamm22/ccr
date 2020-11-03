@@ -1,15 +1,39 @@
 function GameView(game, ctx) {
   this.ctx = ctx;
   this.game = game;
+  this.space = [0,0]
+}
+GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
+    document.getElementById("game-canvas").addEventListener("mousemove", (e) => {
+        this.x = e.clientX;
+        this.y = e.clientY;
+        let coor = "X coords: " + this.x + ", Y coords: " + this.y;
+        document.getElementById("demo").innerHTML = coor;
+    });
+    window.addEventListener("keydown", (e)=>{
+        if(e.keyCode === 32){
+            this.space[0]=this.x
+            this.space[1]=this.y
+            let coor = "X : " + this.space[0] + ", Y : " + this.space[1];
+            document.getElementById("keyp").innerHTML = coor;
+        }
+    })
+    window.addEventListener("click", (e)=>{
+        this.x = e.clientX;
+        this.y = e.clientY;
+        let coor = "X : " + this.x + ", Y : " + this.y;
+        document.getElementById("keyp").innerHTML = coor;
+    })
 }
 
 GameView.prototype.start = function start() {
-  //   this.bindKeyHandlers();
+  this.bindKeyHandlers();
   this.game.makeBeats();
   this.lastTime = 0;
   this.beatIdx = 0;
   requestAnimationFrame(this.animate.bind(this));
 };
+
 
 GameView.prototype.animate = function animate(time) {
   const timeDelta = time - this.lastTime;

@@ -28,10 +28,6 @@ Game.prototype.draw = function draw(ctx) {
   ctx.fillRect(0, 0, Game.DIM_X, Game.DIM_Y);
 };
 
-// Game.prototype.displayBeat = function displayBeat(beat){
-    
-// }
-
 Game.prototype.makeBeats = function makeBeats(){
     this.beats = this.beatmap.map(beat => {
         return new Beat(beat)
