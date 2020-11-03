@@ -1,7 +1,11 @@
+const Util = require("./util");
+const anime = require("animejs");
+
 function GameView(game, ctx) {
   this.ctx = ctx;
   this.game = game;
-  this.space = [0,0]
+  this.click = [0,0];
+  this.hitBeats = [];
 }
 GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
     document.getElementById("game-canvas").addEventListener("mousemove", (e) => {
@@ -12,18 +16,74 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
     });
     window.addEventListener("keydown", (e)=>{
         if(e.keyCode === 32){
-            this.space[0]=this.x
-            this.space[1]=this.y
-            let coor = "X : " + this.space[0] + ", Y : " + this.space[1];
+            this.click[0]=this.x
+            this.click[1]=this.y
+            let coor = "X : " + this.click[0] + ", Y : " + this.click[1];
             document.getElementById("keyp").innerHTML = coor;
+            this.game.activeBeats.forEach((activeBeat, idx) => {
+                //check if the mousepos was in any of the activeBeats 
+                if (Util.dist(this.click, activeBeat.pos) < activeBeat.radius) {
+                    //remove beat from activeBeats and put in hitBeats
+                    this.hitBeats.push(this.game.activeBeats.splice(idx, 1)[0])
+                    let coor2 =
+                        "X : " +
+                        Util.dist(this.click, activeBeat.pos) +
+                        ", Y : " +
+                        activeBeat.radius;
+                    document.getElementById("click").innerHTML = coor2;
+                }
+            });
         }
     })
     window.addEventListener("click", (e)=>{
-        this.x = e.clientX;
-        this.y = e.clientY;
-        let coor = "X : " + this.x + ", Y : " + this.y;
+        this.click[0] = e.clientX;
+        this.click[1] = e.clientY;
+        this.game.activeBeats.forEach((activeBeat,idx) => {
+            if( Util.dist(this.click, activeBeat.pos) < activeBeat.radius){
+                this.hitBeats.push(this.game.activeBeats.splice(idx, 1)[0]);
+                let coor2 =
+                  "X : " +
+                  Util.dist(this.click, activeBeat.pos) +
+                  ", Y : " +
+                  activeBeat.radius;
+                  document.getElementById("click").innerHTML = coor2;
+            }
+        })
+        let coor = "X : " + this.click[0] + ", Y : " + this.click[1];
         document.getElementById("keyp").innerHTML = coor;
     })
+}
+
+GameView.prototype.isActiveBeat = function isActiveBeat(beat, idx, time){
+    if (Math.abs(beat.time - time) <= 1000) {
+        if (Math.abs(beat.time - time) <= 800) {
+            //add beat to activeBeats and prevent duplicates
+            if (idx >= this.beatIdx) {
+                this.game.activeBeats.push(beat);
+                this.beatIdx++;
+            }
+        } 
+        else if (time - beat.time > 800) {
+            let idx = this.game.activeBeats.indexOf(beat);
+            if (idx !== -1) {
+            this.game.activeBeats.splice(idx, 1);
+            }
+        }
+    }
+}
+
+GameView.prototype.drawBeat = function drawBeat(beat, time){
+    if (Math.abs(beat.time - time) <= 1000) {
+        if(this.hitBeats.includes(beat)){
+            console.log("hitbeat")
+        }
+        else if(this.game.activeBeats.includes(beat)){
+            beat.drawActive(this.ctx)
+        }
+        else{
+            beat.draw(this.ctx)
+        } 
+    }
 }
 
 GameView.prototype.start = function start() {
@@ -36,34 +96,17 @@ GameView.prototype.start = function start() {
 
 
 GameView.prototype.animate = function animate(time) {
-  const timeDelta = time - this.lastTime;
+    const timeDelta = time - this.lastTime;
 
-  this.game.draw(this.ctx);
-  if (this.game.beats.length !== 0) {
-    this.game.beats.forEach((beat,idx) => {
-      if (Math.abs(beat.time - time) <= 1000) {
-        if(idx >= this.beatIdx){ //prevent duplicates in activeBeats
-            if(Math.abs(beat.time - time) <= 500) {
-                this.game.activeBeats.push(beat);
-                this.beatIdx++;
-            }
-        }
-        // this.game.activeBeats.forEach((activeBeat,idx2)=>{
-            //event listener for mouse click
-            //if click, and position within beat radius (if outside radius, ignore click), draw hit animation and remove from active beats
-                //draw scenario 1: draw hit. remove from activebeats
-            //if time difference exceeds 500, play miss animation and remove from active beats
-                //skip/optional: draw scenario 2: if miss, flash red and indicate miss. otherwise, beat would disappear on its own without any indicator
-        // }
-        //if you didn't encounter draw scenarios 1 or 2, then you do draw scenario 3 below:
-        //draw scenario 3: confirm still in active beats. draw as normal:
-        beat.draw(this.ctx); 
-      }
-    });
-  }
-  console.log(this.game.activeBeats)
-  this.lastTime = time;
-  requestAnimationFrame(this.animate.bind(this));
+    this.game.draw(this.ctx);
+    if (this.game.beats.length !== 0) {
+        this.game.beats.forEach((beat, idx) => {
+            this.isActiveBeat(beat, idx, time)
+            this.drawBeat(beat, time)
+        })
+    }
+    this.lastTime = time;
+    requestAnimationFrame(this.animate.bind(this));
 };
 
 module.exports = GameView;

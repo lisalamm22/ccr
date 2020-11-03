@@ -27,4 +27,12 @@ Beat.prototype.draw = function draw(ctx) {
   ctx.fill();
 };
 
+Beat.prototype.drawActive = function drawActive(ctx) {
+  ctx.fillStyle = 'red';
+
+  ctx.beginPath();
+  ctx.arc(this.pos[0], this.pos[1], this.radius, 0, 2 * Math.PI, true);
+  ctx.fill();
+};
+
 module.exports = Beat;
