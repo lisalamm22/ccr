@@ -5,7 +5,7 @@ function GameView(game, ctx) {
   this.ctx = ctx;
   this.game = game;
   this.click = [0,0];
-  this.hitBeats = [];
+  this.hitBeats = {};
 }
 GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
     document.getElementById("game-canvas").addEventListener("mousemove", (e) => {
@@ -24,7 +24,8 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
                 //check if the mousepos was in any of the activeBeats 
                 if (Util.dist(this.click, activeBeat.pos) < activeBeat.radius) {
                     //remove beat from activeBeats and put in hitBeats
-                    this.hitBeats.push(this.game.activeBeats.splice(idx, 1)[0])
+                    let hitBeat = JSON.stringify(this.game.activeBeats.splice(idx, 1)[0]);
+                    this.hitBeats[hitBeat] = this.lastTime;
                     let coor2 =
                         "X : " +
                         Util.dist(this.click, activeBeat.pos) +
@@ -40,7 +41,8 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
         this.click[1] = e.clientY;
         this.game.activeBeats.forEach((activeBeat,idx) => {
             if( Util.dist(this.click, activeBeat.pos) < activeBeat.radius){
-                this.hitBeats.push(this.game.activeBeats.splice(idx, 1)[0]);
+                let hitBeat = JSON.stringify(this.game.activeBeats.splice(idx, 1)[0]);
+                this.hitBeats[hitBeat] = this.lastTime;
                 let coor2 =
                   "X : " +
                   Util.dist(this.click, activeBeat.pos) +
@@ -72,17 +74,50 @@ GameView.prototype.isActiveBeat = function isActiveBeat(beat, idx, time){
     }
 }
 
+GameView.prototype.drawHitBeat = function drawHitBeat(ctx, beat, hitTime, time){
+    const timeDelta =  time - hitTime; // 1000-2000
+
+    if(timeDelta < 100){
+        let radiusMul = (timeDelta / 100) + 1;
+        let opacity = 1 - ((timeDelta - 100) / 100);
+        beat.draw(this.ctx, opacity);
+        beat.drawRing(this.ctx, opacity, radiusMul);
+    }
+}
+
 GameView.prototype.drawBeat = function drawBeat(beat, time){
-    if (Math.abs(beat.time - time) <= 1000) {
-        if(this.hitBeats.includes(beat)){
+    const timeDelta =  time - beat.time; // 1000-2000
+    
+    if (Math.abs(timeDelta) <= 1000) {    
+        if(Object.keys(this.hitBeats).includes(JSON.stringify(beat))){
             console.log("hitbeat")
+            let hitTime = this.hitBeats[JSON.stringify(beat)]
+            this.drawHitBeat(this.ctx, beat, hitTime, time)
         }
-        else if(this.game.activeBeats.includes(beat)){
-            beat.drawActive(this.ctx)
+        else if(timeDelta < -500){
+            let radiusMul = (-(timeDelta+500)/500) + 2;
+            let opacity = (1+((timeDelta + 500) / 500));
+            beat.draw(this.ctx, opacity);
+            beat.drawRing(this.ctx, opacity, radiusMul)
+        }
+        else if(timeDelta < 0){
+            let radiusMul = (-(timeDelta+500)/500) + 2;
+            let opacity = 1;
+            beat.draw(this.ctx, opacity);
+            beat.drawRing(this.ctx, opacity, radiusMul)
+        }
+        else if(timeDelta < 500){
+            let radiusMul = 1;
+            let opacity = 1;
+            beat.draw(this.ctx, opacity);
+            beat.drawRing(this.ctx, opacity, radiusMul)
         }
         else{
-            beat.draw(this.ctx)
-        } 
+            let radiusMul = 1;
+            let opacity = 1-((timeDelta - 500) / 500);
+            beat.draw(this.ctx, opacity);
+            beat.drawRing(this.ctx, opacity, radiusMul)
+        }
     }
 }
 
@@ -96,7 +131,7 @@ GameView.prototype.start = function start() {
 
 
 GameView.prototype.animate = function animate(time) {
-    const timeDelta = time - this.lastTime;
+    // const timeDelta = time - this.lastTime;
 
     this.game.draw(this.ctx);
     if (this.game.beats.length !== 0) {

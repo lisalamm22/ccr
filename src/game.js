@@ -24,6 +24,7 @@ function Game(options) {
 
 Game.prototype.draw = function draw(ctx) {
   ctx.clearRect(0, 0, Game.DIM_X, Game.DIM_Y);
+  ctx.globalAlpha=1;
   ctx.fillStyle = Game.BG_COLOR;
   ctx.fillRect(0, 0, Game.DIM_X, Game.DIM_Y);
 };

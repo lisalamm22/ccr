@@ -17,22 +17,36 @@ function Beat(options){
     this.active = options.active || DEFAULTS.ACTIVE;
     this.color = options.color || DEFAULTS.COLOR;
     this.radius = options.radius || DEFAULTS.RADIUS;
+    this.opacity = 0;
 }
 
-Beat.prototype.draw = function draw(ctx) {
-  ctx.fillStyle = this.color;
-
-  ctx.beginPath();
-  ctx.arc(this.pos[0], this.pos[1], this.radius, 0, 2 * Math.PI, true);
-  ctx.fill();
+Beat.prototype.draw = function draw(ctx,opacity) {
+    ctx.beginPath();
+    ctx.globalAlpha = opacity;
+    ctx.arc(this.pos[0], this.pos[1], this.radius, 0, 2 * Math.PI, true);
+    ctx.fillStyle = this.color;
+    ctx.fill();
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = "white";
+    ctx.stroke();
 };
 
-Beat.prototype.drawActive = function drawActive(ctx) {
-  ctx.fillStyle = 'red';
+Beat.prototype.drawRing = function drawRing(ctx, opacity, radiusMul){
+    ctx.beginPath();
+    ctx.globalAlpha = opacity;
+    ctx.arc(this.pos[0], this.pos[1], this.radius*radiusMul, 0, 2 * Math.PI, true);
+    ctx.strokeStyle = "white";
+    ctx.stroke();
+}
 
-  ctx.beginPath();
-  ctx.arc(this.pos[0], this.pos[1], this.radius, 0, 2 * Math.PI, true);
-  ctx.fill();
-};
+// Beat.prototype.drawHit = function drawHit(ctx, time) {
+//     ctx.beginPath();
+//     ctx.arc(this.pos[0], this.pos[1], this.radius, 0, 2 * Math.PI, true);
+//     ctx.fillStyle = "red";
+//     ctx.fill();
+//     ctx.lineWidth = 5;
+//     ctx.strokeStyle = "white";
+//     ctx.stroke();
+// };
 
 module.exports = Beat;
