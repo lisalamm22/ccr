@@ -44,17 +44,14 @@ Beat.prototype.drawRing = function drawRing(ctx, opacity, radiusMul, color, hit=
         ctx.lineWidth = 5*radiusMul
     }
     ctx.strokeStyle = color || this.color;
+    if(hit){
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = this.color;
+    }
+    else{
+        ctx.shadowBlur = 0;
+    }
     ctx.stroke();
 }
-
-// Beat.prototype.drawHit = function drawHit(ctx, time) {
-//     ctx.beginPath();
-//     ctx.arc(this.pos[0], this.pos[1], this.radius, 0, 2 * Math.PI, true);
-//     ctx.fillStyle = "red";
-//     ctx.fill();
-//     ctx.lineWidth = 5;
-//     ctx.strokeStyle = "white";
-//     ctx.stroke();
-// };
 
 module.exports = Beat;
