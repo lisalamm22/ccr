@@ -6,6 +6,7 @@ function GameView(game, ctx) {
   this.game = game;
   this.click = [0,0];
   this.hitBeats = {};
+  this.score = 0;
 }
 GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
     document.getElementById("game-canvas").addEventListener("mousemove", (e) => {
@@ -13,6 +14,7 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
         this.y = e.clientY;
         let coor = "X coords: " + this.x + ", Y coords: " + this.y;
         document.getElementById("demo").innerHTML = coor;
+        document.getElementById("score").innerHTML = "Score: " + this.score;
     });
     window.addEventListener("keydown", (e)=>{
         if(e.keyCode === 32){
@@ -24,8 +26,10 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
                 //check if the mousepos was in any of the activeBeats 
                 if (Util.dist(this.click, activeBeat.pos) < activeBeat.radius) {
                     //remove beat from activeBeats and put in hitBeats
-                    let hitBeat = JSON.stringify(this.game.activeBeats.splice(idx, 1)[0]);
-                    this.hitBeats[hitBeat] = this.lastTime;
+                    let hitBeat = this.game.activeBeats.splice(idx, 1)[0];
+                    let hitBeatStr = JSON.stringify(hitBeat);
+                    this.hitBeats[hitBeatStr] = this.lastTime;
+                    this.scoreHit(hitBeat);
                     let coor2 =
                         "X : " +
                         Util.dist(this.click, activeBeat.pos) +
@@ -41,8 +45,10 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
         this.click[1] = e.clientY;
         this.game.activeBeats.forEach((activeBeat,idx) => {
             if( Util.dist(this.click, activeBeat.pos) < activeBeat.radius){
-                let hitBeat = JSON.stringify(this.game.activeBeats.splice(idx, 1)[0]);
-                this.hitBeats[hitBeat] = this.lastTime;
+                let hitBeat = this.game.activeBeats.splice(idx, 1)[0];
+                let hitBeatStr = JSON.stringify(hitBeat);
+                this.hitBeats[hitBeatStr] = this.lastTime;
+                this.scoreHit(hitBeat);
                 let coor2 =
                   "X : " +
                   Util.dist(this.click, activeBeat.pos) +
@@ -90,7 +96,6 @@ GameView.prototype.drawBeat = function drawBeat(beat, time){
     
     if (Math.abs(timeDelta) <= 1000) {    
         if(Object.keys(this.hitBeats).includes(JSON.stringify(beat))){
-            console.log("hitbeat")
             let hitTime = this.hitBeats[JSON.stringify(beat)]
             this.drawHitBeat(this.ctx, beat, hitTime, time)
         }
@@ -121,6 +126,12 @@ GameView.prototype.drawBeat = function drawBeat(beat, time){
     }
 }
 
+GameView.prototype.scoreHit = function scoreHit(beat){
+    let fullScore = 100;
+    let hitTime = this.hitBeats[JSON.stringify(beat)];
+    this.score += fullScore * (500-Math.abs(hitTime-beat.time))/500
+}
+
 GameView.prototype.start = function start() {
   this.bindKeyHandlers();
   this.game.makeBeats();
@@ -132,6 +143,7 @@ GameView.prototype.start = function start() {
 
 GameView.prototype.animate = function animate(time) {
     // const timeDelta = time - this.lastTime;
+    this.lastTime = time;
 
     this.game.draw(this.ctx);
     if (this.game.beats.length !== 0) {
@@ -140,7 +152,6 @@ GameView.prototype.animate = function animate(time) {
             this.drawBeat(beat, time)
         })
     }
-    this.lastTime = time;
     requestAnimationFrame(this.animate.bind(this));
 };
 

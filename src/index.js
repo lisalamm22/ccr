@@ -14,8 +14,6 @@ document.addEventListener("DOMContentLoaded", function () {
     canvasElement.width = Game.DIM_X;
     canvasElement.height = Game.DIM_Y;
 
-    //get mouse coordinates
-
     //start new game
     const game = new Game();
     new GameView(game, ctx).start();

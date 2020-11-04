@@ -3,8 +3,6 @@ const Beat = require("./beat");
 Game.BG_COLOR = "#000000";
 Game.DIM_X = 1000;
 Game.DIM_Y = 600;
-Game.FPS = 30;
-// Game.NUM_ASTEROIDS = 10;
 
 function Game(options) {
     // this.beatmap = options.beatmap;
