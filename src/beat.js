@@ -20,6 +20,7 @@ function Beat(options){
     this.color = options.color || Util.randomColor(0.75) || DEFAULTS.COLOR;
     this.radius = options.radius || DEFAULTS.RADIUS;
     this.opacity = 0;
+    this.held = true;
 }
 
 Beat.prototype.drawClick = function draw(ctx, opacity, radiusMul=1, seq) {

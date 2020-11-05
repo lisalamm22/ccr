@@ -9,7 +9,7 @@ function Game(options) {
     this.beatmap = [
       { pos: [20, 20], time: 2000 },
       { pos: [460, 40], time: 2500 },
-      { pos: [850, 200], time: 3000, type: "DRAG", length: 100, dir: 30 },
+      { pos: [850, 200], time: 3000, type: "DRAG", length: 100, dir: 300 },
       { pos: [230, 300], time: 4000 },
       { pos: [200, 290], time: 5000 },
       { pos: [600, 400], time: 6000 },
