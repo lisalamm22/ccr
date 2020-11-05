@@ -148,11 +148,13 @@ GameView.prototype.drawBeat = function drawBeat(beat, time){
 }
 GameView.prototype.drawDrag = function drawDrag(beat, time){
     const timeDelta =  time - beat.time; // 1000-2000
-    const beatTime = 1000
+    const inactiveBeatT = 500
     const activeBeatT = 500
-    const inactiveBeatT = beatTime - activeBeatT
+    const dragTime = beat.length*1000/60
+    const beatTime = inactiveBeatT + activeBeatT + dragTime
     
-    if (Math.abs(timeDelta) <= beatTime) {    
+    if (-timeDelta <= inactiveBeatT + activeBeatT 
+        && timeDelta <= (beat.time + inactiveBeatT + dragTime)) {
         if(timeDelta < -activeBeatT){
             let radiusMul = (-(timeDelta+ inactiveBeatT)/ inactiveBeatT) + 2;
             let opacity = (1+((timeDelta + inactiveBeatT) / inactiveBeatT));
@@ -168,7 +170,7 @@ GameView.prototype.drawDrag = function drawDrag(beat, time){
             beat.moveDragBeat(time);
             beat.drawRing(this.ctx, opacity, radiusMul, "white");
         }
-        else if(timeDelta < activeBeatT){
+        else if(timeDelta < dragTime){
             let radiusMul = 1;
             let opacity = 1;
             beat.drawDrag(this.ctx, opacity, radiusMul);
@@ -196,7 +198,7 @@ GameView.prototype.scoreHit = function scoreHit(beat){
 
 GameView.prototype.startAudio = function startAudio(audioURL){
     audioObj = new Audio(audioURL);
-    audioObj.addEventListener("canplaythrough", e => {
+    audioObj.addEventListener("canplaythrough", (e) => {
         audioObj.play();
     })
 }
@@ -207,24 +209,24 @@ GameView.prototype.start = function start(audioURL) {
     this.game.makeBeats();
     this.bindKeyHandlers();
     this.lastTime = 0;
+    this.startTime = performance.now()
     this.beatIdx = 0;
     requestAnimationFrame(this.animate.bind(this));
 };
 
 
 GameView.prototype.animate = function animate(time) {
-    // const timeDelta = time - this.lastTime;
-    this.lastTime = time;
+    this.lastTime = time - this.startTime;
 
     this.game.draw(this.ctx);
     if (this.game.beats.length !== 0) {
         this.game.beats.forEach((beat, idx) => {
-            this.isActiveBeat(beat, idx, time)
+            this.isActiveBeat(beat, idx, this.lastTime)
             if(beat.type === "CLICK"){
-                this.drawBeat(beat, time)
+                this.drawBeat(beat, this.lastTime)
             }
             else{
-                this.drawDrag(beat, time)
+                this.drawDrag(beat, this.lastTime)
             }
         })
     }

@@ -20,6 +20,6 @@ document.addEventListener("DOMContentLoaded", function () {
         const game = new Game();
         const audioURL =
           "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
-        new GameView(game, ctx).start(audioURL);
+        const gameview = new GameView(game, ctx).start(audioURL);
     })
 });
