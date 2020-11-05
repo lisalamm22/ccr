@@ -6,6 +6,7 @@ const Beat = require("./beat")
 // window.Game = Game;
 
 document.addEventListener("DOMContentLoaded", function () {
+    const startButton = document.getElementById("start-btn");
     const canvasElement = document.getElementById("game-canvas");
     const ctx = canvasElement.getContext("2d");
     window.ctx = ctx;
@@ -15,6 +16,10 @@ document.addEventListener("DOMContentLoaded", function () {
     canvasElement.height = Game.DIM_Y;
 
     //start new game
-    const game = new Game();
-    new GameView(game, ctx).start();
+    startButton.addEventListener("click", ()=>{
+        const game = new Game();
+        const audioURL =
+          "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+        new GameView(game, ctx).start(audioURL);
+    })
 });

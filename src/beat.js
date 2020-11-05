@@ -1,27 +1,28 @@
 const Util = require("./util");
 
 const DEFAULTS = {
-  TYPE: "PRESS",
-  SHAPE: "DOT",
+  TYPE: "CLICK",
+  LENGTH: 0,
+  DIR: 0, // 0 to 359
   SEQ: "",
-//   ACTIVE: false,
   COLOR: "rgba(255, 255, 255, .75)",
   RADIUS: 50,
 };
 
 function Beat(options){
-    this.pos = options.pos;
+    this.pos = options.pos.slice(0);
+    this.startPos = options.pos.slice(0);
     this.time = options.time;
     this.type = options.type || DEFAULTS.TYPE;
-    this.shape = options.shape || DEFAULTS.SHAPE;
+    this.length = options.length || DEFAULTS.LENGTH;
+    this.dir = options.dir || DEFAULTS.DIR;
     this.seq = options.seq || DEFAULTS.SEQ;
-    // this.active = options.active || DEFAULTS.ACTIVE;
     this.color = options.color || Util.randomColor(0.75) || DEFAULTS.COLOR;
     this.radius = options.radius || DEFAULTS.RADIUS;
     this.opacity = 0;
 }
 
-Beat.prototype.draw = function draw(ctx, opacity, radiusMul=1, seq) {
+Beat.prototype.drawClick = function draw(ctx, opacity, radiusMul=1, seq) {
     ctx.beginPath();
     ctx.globalAlpha = 0.25*opacity;
     ctx.arc(this.pos[0], this.pos[1], this.radius*radiusMul, 0, 2 * Math.PI, true);
@@ -52,6 +53,62 @@ Beat.prototype.drawRing = function drawRing(ctx, opacity, radiusMul, color, hit=
         ctx.shadowBlur = 0;
     }
     ctx.stroke();
+}
+
+Beat.prototype.drawDrag = function drawDrag(ctx, opacity, radiusMul){
+    const rad = (this.dir * 2 * Math.PI) / 360;
+
+    const x1 = this.startPos[0]- this.radius * Math.sin(rad);
+    const y1 = this.startPos[1]- this.radius * Math.cos(rad);
+    
+    const x2 = x1 + this.length * Math.cos(rad);
+    const y2 = y1 - this.length * Math.sin(rad);
+    
+    const x3 = x2+ this.radius * Math.sin(rad);
+    const y3 = y2+ this.radius * Math.cos(rad);
+    const alphai3 = -rad - 0.5 * Math.PI
+    const alphaf3 = -rad - 1.5 * Math.PI
+    
+    const x4 = this.startPos[0] + this.radius * Math.sin(rad);
+    const y4 = this.startPos[1] + this.radius * Math.cos(rad);
+
+    const x5 = x4 - this.radius * Math.sin(rad);
+    const y5 = y4 - this.radius * Math.cos(rad);
+    const alphai5 = -rad + 0.5 * Math.PI;
+    const alphaf5 = -rad + 1.5 * Math.PI;
+    
+    ctx.beginPath();
+    ctx.globalAlpha = 1*opacity;
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = "white";
+    ctx.moveTo( x1, y1 );
+    ctx.lineTo( x2, y2 );
+    ctx.arc(x3, y3, this.radius, alphai3, alphaf3);
+    ctx.lineTo(x4,y4);
+    ctx.arc(x5, y5, this.radius, alphai5, alphaf5);
+    ctx.stroke();
+}
+
+Beat.prototype.getEndPos = function getEndPos(){
+    let x = this.startPos[0]
+    let y = this.startPos[1]
+
+    let deltaX = this.length * Math.cos(this.dir * 2 * Math.PI / 360)
+    let deltaY = this.length * Math.sin(this.dir * 2 * Math.PI / 360)
+
+    this.endPos = [x + deltaX, y + deltaY]
+}
+
+Beat.prototype.moveDragBeat = function moveDragBeat(time){
+    const timeDelta = time - this.time;
+
+    if (timeDelta >= 0){
+        let deltaX = Math.cos((this.dir * 2 * Math.PI) / 360);
+        let deltaY = Math.sin((this.dir * 2 * Math.PI) / 360);
+
+        this.pos[0] = this.pos[0] + deltaX;
+        this.pos[1] = this.pos[1] - deltaY;
+    }
 }
 
 module.exports = Beat;

@@ -5,6 +5,7 @@ function GameView(game, ctx) {
   this.ctx = ctx;
   this.game = game;
   this.click = [0,0];
+  this.release = [0,0];
   this.activeBeats = [];
   this.hitBeats = {};
   this.score = 0;
@@ -41,10 +42,12 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
             });
         }
     })
-    window.addEventListener("click", (e)=>{
+    window.addEventListener("mousedown", (e)=>{
         this.click[0] = e.clientX;
         this.click[1] = e.clientY;
+        this.clicked = true
         this.activeBeats.forEach((activeBeat,idx) => {
+            if(activeBeat.type === "CLICK"){
             if( Util.dist(this.click, activeBeat.pos) < activeBeat.radius){
                 let hitBeat = this.activeBeats.splice(idx, 1)[0];
                 let hitBeatStr = JSON.stringify(hitBeat);
@@ -56,10 +59,22 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
                   ", Radius : " +
                   activeBeat.radius;
                   document.getElementById("click").innerHTML = dist;
+            }}
+            if(activeBeat.type === "DRAG"){
+                if( !(Util.dist([this.x, this.y], activeBeat.pos) < activeBeat.radius) ){
+                    this.activeBeats.splice(idx, 1)[0];
+                }
+
             }
         })
         let coor = "Click: X : " + this.click[0] + ", Y : " + this.click[1];
         document.getElementById("keyp").innerHTML = coor;
+    })
+
+    window.addEventListener("mouseup", (e) => {
+        this.clicked = false;
+        this.release[0] = e.clientX;
+        this.release[1] = e.clientY;
     })
 }
 
@@ -89,7 +104,7 @@ GameView.prototype.drawHitBeat = function drawHitBeat(ctx, beat, hitTime, time){
         let beatRadMul = (timeDelta / (2*timeToFade)) + 1;
         let ringRadMul = (timeDelta / timeToFade) + 1;
         let opacity = 1 - (timeDelta / timeToFade);
-        beat.draw(this.ctx, opacity, beatRadMul);
+        beat.drawClick(this.ctx, opacity, beatRadMul);
         beat.drawRing(this.ctx, opacity, ringRadMul, null, true);
     }
 }
@@ -108,25 +123,65 @@ GameView.prototype.drawBeat = function drawBeat(beat, time){
         else if(timeDelta < -activeBeatT){
             let radiusMul = (-(timeDelta+ inactiveBeatT)/ inactiveBeatT) + 2;
             let opacity = (1+((timeDelta + inactiveBeatT) / inactiveBeatT));
-            beat.draw(this.ctx, opacity);
+            beat.drawClick(this.ctx, opacity);
             beat.drawRing(this.ctx, opacity, radiusMul, "white")
         }
         else if(timeDelta < 0){
             let radiusMul = (-(timeDelta+activeBeatT)/activeBeatT) + 2;
             let opacity = 1;
-            beat.draw(this.ctx, opacity);
+            beat.drawClick(this.ctx, opacity);
             beat.drawRing(this.ctx, opacity, radiusMul, "white");
         }
         else if(timeDelta < activeBeatT){
             let radiusMul = 1;
             let opacity = 1;
-            beat.draw(this.ctx, opacity);
+            beat.drawClick(this.ctx, opacity);
             beat.drawRing(this.ctx, opacity, radiusMul, "white");
         }
         else{
             let radiusMul = 1;
             let opacity = 1-((timeDelta - inactiveBeatT) / inactiveBeatT);
-            beat.draw(this.ctx, opacity);
+            beat.drawClick(this.ctx, opacity);
+            beat.drawRing(this.ctx, opacity, radiusMul, "white");
+        }
+    }
+}
+GameView.prototype.drawDrag = function drawDrag(beat, time){
+    const timeDelta =  time - beat.time; // 1000-2000
+    const beatTime = 1000
+    const activeBeatT = 500
+    const inactiveBeatT = beatTime - activeBeatT
+    
+    if (Math.abs(timeDelta) <= beatTime) {    
+        if(timeDelta < -activeBeatT){
+            let radiusMul = (-(timeDelta+ inactiveBeatT)/ inactiveBeatT) + 2;
+            let opacity = (1+((timeDelta + inactiveBeatT) / inactiveBeatT));
+            beat.drawDrag(this.ctx, opacity, radiusMul);
+            beat.drawClick(this.ctx, opacity);
+            beat.drawRing(this.ctx, opacity, radiusMul, "white")
+        }
+        else if(timeDelta < 0){
+            let radiusMul = (-(timeDelta+activeBeatT)/activeBeatT) + 2;
+            let opacity = 1;
+            beat.drawDrag(this.ctx, opacity, radiusMul);
+            beat.drawClick(this.ctx, opacity);
+            beat.moveDragBeat(time);
+            beat.drawRing(this.ctx, opacity, radiusMul, "white");
+        }
+        else if(timeDelta < activeBeatT){
+            let radiusMul = 1;
+            let opacity = 1;
+            beat.drawDrag(this.ctx, opacity, radiusMul);
+            beat.drawClick(this.ctx, opacity);
+            beat.moveDragBeat(time);
+            beat.drawRing(this.ctx, opacity, radiusMul, "white");
+        }
+        else{
+            let radiusMul = 1;
+            let opacity = 1-((timeDelta - inactiveBeatT) / inactiveBeatT);
+            beat.drawDrag(this.ctx, opacity, radiusMul);
+            beat.drawClick(this.ctx, opacity);
+            beat.moveDragBeat(time);
             beat.drawRing(this.ctx, opacity, radiusMul, "white");
         }
     }
@@ -139,13 +194,21 @@ GameView.prototype.scoreHit = function scoreHit(beat){
     this.score += fullScore * (activeBeatT-Math.abs(hitTime-beat.time))/activeBeatT
 }
 
-GameView.prototype.start = function start() {
-  this.bindKeyHandlers();
-  this.game.checkSeq();
-  this.game.makeBeats();
-  this.lastTime = 0;
-  this.beatIdx = 0;
-  requestAnimationFrame(this.animate.bind(this));
+GameView.prototype.startAudio = function startAudio(audioURL){
+    audioObj = new Audio(audioURL);
+    audioObj.addEventListener("canplaythrough", e => {
+        audioObj.play();
+    })
+}
+
+GameView.prototype.start = function start(audioURL) {
+    this.startAudio(audioURL)
+    this.game.checkSeq();
+    this.game.makeBeats();
+    this.bindKeyHandlers();
+    this.lastTime = 0;
+    this.beatIdx = 0;
+    requestAnimationFrame(this.animate.bind(this));
 };
 
 
@@ -157,7 +220,12 @@ GameView.prototype.animate = function animate(time) {
     if (this.game.beats.length !== 0) {
         this.game.beats.forEach((beat, idx) => {
             this.isActiveBeat(beat, idx, time)
-            this.drawBeat(beat, time)
+            if(beat.type === "CLICK"){
+                this.drawBeat(beat, time)
+            }
+            else{
+                this.drawDrag(beat, time)
+            }
         })
     }
     requestAnimationFrame(this.animate.bind(this));
