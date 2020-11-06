@@ -1,7 +1,7 @@
 const Util = require("./util");
 const anime = require("animejs");
 
-function GameView(game, ctx) {
+function GameView(game, ctx, audioURL) {
   this.ctx = ctx;
   this.game = game;
   this.click = [0,0];
@@ -10,14 +10,14 @@ function GameView(game, ctx) {
   this.activeBeats = [];
   this.hitBeats = {};
   this.score = 0;
+  this.audioURL = audioURL;
 }
 GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
     document.getElementById("game-canvas").addEventListener("mousemove", (e) => {
-        this.x = e.clientX;
-        this.y = e.clientY;
-        let coor = "X coords: " + this.x + ", Y coords: " + this.y;
-        document.getElementById("demo").innerHTML = coor;
-        document.getElementById("score").innerHTML = "Score: " + this.score;
+        const canvasElement = document.getElementById("game-canvas")
+        this.x = e.clientX - (window.innerWidth - canvasElement.width)/2;
+        this.y = e.clientY - (window.innerHeight - canvasElement.height) / 2;
+        // document.getElementById("score").innerHTML = "Score: " + this.score;
     });
     window.addEventListener("keydown", (e)=>{
         if(e.keyCode === 32){
@@ -28,26 +28,25 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
             });
         }
     })
+    window.addEventListener("keyup", (e) => {
+        if(e.keyCode === 32){
+            this.mousedown = false;
+        }
+    });
     window.addEventListener("mousedown", (e)=>{
-        this.click[0] = e.clientX;
-        this.click[1] = e.clientY;
+        const canvasElement = document.getElementById("game-canvas");
+        this.click[0] = e.clientX - (window.innerWidth - canvasElement.width)/2;
+        this.click[1] = e.clientY - (window.innerHeight - canvasElement.height) / 2;
         this.mousedown = true;
         this.activeBeats.forEach((activeBeat,idx) => {
-            // if(activeBeat.type === "CLICK"){
                 this.checkClick(activeBeat, idx);
-            // }
-            // if(activeBeat.type === "DRAG"){
-            //     if( !(Util.dist([this.x, this.y], activeBeat.pos) < activeBeat.radius) ){
-            //         this.activeBeats.splice(idx, 1)[0];
-            //     }
-            // }
         })
     })
 
     window.addEventListener("mouseup", (e) => {
         this.mousedown = false;
-        this.release[0] = e.clientX;
-        this.release[1] = e.clientY;
+        // this.release[0] = e.clientX;
+        // this.release[1] = e.clientY;
     })
 }
 
@@ -206,19 +205,18 @@ GameView.prototype.scoreHit = function scoreHit(beat){
 GameView.prototype.scoreDrag = function scoreDrag(hit){
     if(hit){
         this.score += 100;
-        console.log("I dragged")
     }
 }
 
-GameView.prototype.startAudio = function startAudio(audioURL){
-    audioObj = new Audio(audioURL);
+GameView.prototype.startAudio = function startAudio(){
+    audioObj = new Audio(this.audioURL);
     audioObj.addEventListener("canplaythrough", (e) => {
         audioObj.play();
     })
 }
 
-GameView.prototype.start = function start(audioURL) {
-    this.startAudio(audioURL)
+GameView.prototype.start = function start() {
+    this.startAudio()
     this.game.checkSeq();
     this.game.makeBeats();
     this.bindKeyHandlers();
