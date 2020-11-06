@@ -1,23 +1,26 @@
 const Util = require("./util");
 const anime = require("animejs");
 
-function GameView(game, ctx, audioURL) {
+function GameView(game, ctx, options) {
   this.ctx = ctx;
   this.game = game;
   this.click = [0,0];
-  this.release = [0,0];
   this.mousedown = false;
   this.activeBeats = [];
   this.hitBeats = {};
   this.score = 0;
-  this.audioURL = audioURL;
+  this.audioURL = options.audioURL;
+  this.volume = (options.volume/100) || 0.5
+
+  //create audio for game
+  this.audioObj = new Audio(this.audioURL);
+  this.audioObj.volume = this.volume;
 }
 GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
     document.getElementById("game-canvas").addEventListener("mousemove", (e) => {
         const canvasElement = document.getElementById("game-canvas")
         this.x = e.clientX - (window.innerWidth - canvasElement.width)/2;
         this.y = e.clientY - (window.innerHeight - canvasElement.height) / 2;
-        // document.getElementById("score").innerHTML = "Score: " + this.score;
     });
     window.addEventListener("keydown", (e)=>{
         if(e.keyCode === 32){
@@ -45,15 +48,18 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
 
     window.addEventListener("mouseup", (e) => {
         this.mousedown = false;
-        // this.release[0] = e.clientX;
-        // this.release[1] = e.clientY;
+    })
+
+    const volumeInput = document.getElementById("volume-GV")
+    volumeInput.addEventListener("change", (e) => {
+        this.audioObj.volume = e.target.value/100
+        console.log(`gameview volume: ${e.target.value}`)
     })
 }
 
 GameView.prototype.isActiveBeat = function isActiveBeat(beat, idx, time){
     if (Math.abs(beat.time - time) <= 1000) {
         if (Math.abs(beat.time - time) <= 800) {
-            //add beat to activeBeats and prevent duplicates
             if (idx >= this.beatIdx) {
                 this.activeBeats.push(beat);
                 this.beatIdx++;
@@ -69,19 +75,11 @@ GameView.prototype.isActiveBeat = function isActiveBeat(beat, idx, time){
 }
 
 GameView.prototype.checkClick = function checkClick(activeBeat, idx){
-  //check if the mousepos was in any of the activeBeats
   if (Util.dist(this.click, activeBeat.pos) < activeBeat.radius) {
-    //remove beat from activeBeats and put in hitBeats
     let hitBeat = this.activeBeats.splice(idx, 1)[0];
     let hitBeatStr = JSON.stringify(hitBeat);
     this.hitBeats[hitBeatStr] = this.lastTime;
     this.scoreHit(hitBeat);
-    // let dist =
-    //     "Distance : " +
-    //     Util.dist(this.click, activeBeat.pos) +
-    //     ", Radius : " +
-    //     activeBeat.radius;
-    // document.getElementById("click").innerHTML = dist;
   }
 }
 
@@ -208,15 +206,19 @@ GameView.prototype.scoreDrag = function scoreDrag(hit){
     }
 }
 
-GameView.prototype.startAudio = function startAudio(){
-    audioObj = new Audio(this.audioURL);
-    audioObj.addEventListener("canplaythrough", (e) => {
-        audioObj.play();
+GameView.prototype.playAudio = function playAudio(){
+    this.audioObj.addEventListener("canplaythrough", (e) => {
+        this.audioObj.play();
     })
 }
+// GameView.prototype.changeAudioVol = function changeAudioVol(){
+//     this.audioObj.addEventListener("canplaythrough", (e) => {
+//         this.audioObj.play();
+//     })
+// }
 
 GameView.prototype.start = function start() {
-    this.startAudio()
+    this.playAudio()
     this.game.checkSeq();
     this.game.makeBeats();
     this.bindKeyHandlers();
