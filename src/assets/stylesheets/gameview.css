@@ -43,7 +43,7 @@ body{
 .start-options button{
   background-color: pink;
   height: 10%;
-  width: 20%;
+  width: 100%;
 }
 
 /* #game-canvas{
