@@ -1,5 +1,5 @@
 const Util = require("./util");
-const anime = require("animejs");
+// const anime = require("animejs");
 
 function GameView(game, ctx, options) {
   this.ctx = ctx;

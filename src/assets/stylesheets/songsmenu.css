@@ -1,0 +1,172 @@
+.songs-menu{
+  display: flex;
+  height: 100%;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  background-color: black;
+}
+.song-carousel {
+  width: 75vw;
+  height: 60vh;
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 4px 20px -2px rgba(255, 255, 255, 0.2);
+}
+  
+.song-carousel:hover .controls {
+    opacity: 1;
+}
+  
+.song-carousel .controls {
+  opacity: 0;
+  display: flex;
+  position: absolute;
+  top: 50%;
+  left: 0;
+  justify-content: space-between;
+  width: 100%;
+  z-index: 9;
+  transition: all ease 0.5s;
+}
+.song-carousel .controls .control {
+  margin: 0 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 80px;
+  width: 80px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.5);
+  opacity: .5;
+  transition: ease .3s;
+  cursor: pointer;
+  outline: none;
+  font-size: 20px;
+}
+      
+.song-carousel .controls .control:hover {
+  opacity: 1;
+}
+  
+.song-carousel .song-options {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  display: flex;
+  width: 100%;
+  height: 100%;
+  transition: 1s ease-in-out all;
+}
+      
+.song-carousel .song-options .song-option {
+  min-width: 100%;
+  min-height: 100%;
+  height: auto;
+  text-align: center;
+  color: white;
+  font-size: 40px;
+  padding-top: 20%;
+}
+
+.song-option p{
+  width: fit-content;
+  margin: auto;
+  background-color: rgba(0,0,0,.5);
+  padding: 20px 15px;
+}
+
+.song-menu-nav{
+  position: relative;
+  width: 100%;
+  height: 10%;
+}
+
+.button{
+  background: pink;
+  border: white solid 8px;
+  border-radius: 50%;
+  position: absolute;
+  color: white;
+  text-transform: uppercase;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100px;
+  width:100px;
+  top: 50%;
+}
+
+.button:hover {
+  cursor: pointer;
+}
+
+.button p{
+  font-size: 2.5vh;
+  text-align: center;
+}
+
+#start-btn{
+  box-shadow: 0 0px 30px 10px rgba(255, 255, 255, 0.5);
+  left: 50%;
+  transform: scale(1.5);
+}
+
+#start-menu-btn{
+  /* top: 50%; */
+  left: 30%;
+}
+
+#volume-btn{
+  /* top: 50%; */
+  left: 70%;
+}
+
+#volume-btn input{
+  display: none
+}
+
+#song1{
+  background-image: url("../images/1.jpg");
+  background-size: cover;
+}
+#song2{
+  background-image: url("../images/2.jpg");
+  background-size: cover;
+}
+#song3{
+  background-image: url("../images/3.jpg");
+  background-size: cover;
+}
+#song4{
+  background-image: url("../images/4.jpg");
+  background-size: cover;
+}
+#song5{
+  background-image: url("../images/5.jpg");
+  background-size: cover;
+}
+#song6{
+  background-image: url("../images/6.jpg");
+  background-size: cover;
+}
+#song7{
+  background-image: url("../images/7.jpg");
+  background-size: cover;
+}
+#song8{
+  background-image: url("../images/8.jpg");
+  background-size: cover;
+}
+#song9{
+  background-image: url("../images/9.jpg");
+  background-size: cover;
+}
+#song10{
+  background-image: url("../images/10.jpg");
+  background-size: cover;
+}
