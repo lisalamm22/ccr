@@ -1,1332 +1,8547 @@
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ "./node_modules/animejs/lib/anime.es.js":
-/*!**********************************************!*\
-  !*** ./node_modules/animejs/lib/anime.es.js ***!
-  \**********************************************/
-/*! namespace exports */
-/*! export default [provided] [no usage info] [missing usage info prevents renaming] */
-/*! other exports [not provided] [no usage info] */
-/*! runtime requirements: __webpack_exports__, __webpack_require__.r, __webpack_require__.d, __webpack_require__.* */
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => __WEBPACK_DEFAULT_EXPORT__
-/* harmony export */ });
-/*
- * anime.js v3.2.1
- * (c) 2020 Julian Garnier
- * Released under the MIT license
- * animejs.com
- */
-
-// Defaults
-
-var defaultInstanceSettings = {
-  update: null,
-  begin: null,
-  loopBegin: null,
-  changeBegin: null,
-  change: null,
-  changeComplete: null,
-  loopComplete: null,
-  complete: null,
-  loop: 1,
-  direction: 'normal',
-  autoplay: true,
-  timelineOffset: 0
-};
-
-var defaultTweenSettings = {
-  duration: 1000,
-  delay: 0,
-  endDelay: 0,
-  easing: 'easeOutElastic(1, .5)',
-  round: 0
-};
-
-var validTransforms = ['translateX', 'translateY', 'translateZ', 'rotate', 'rotateX', 'rotateY', 'rotateZ', 'scale', 'scaleX', 'scaleY', 'scaleZ', 'skew', 'skewX', 'skewY', 'perspective', 'matrix', 'matrix3d'];
-
-// Caching
-
-var cache = {
-  CSS: {},
-  springs: {}
-};
-
-// Utils
-
-function minMax(val, min, max) {
-  return Math.min(Math.max(val, min), max);
-}
-
-function stringContains(str, text) {
-  return str.indexOf(text) > -1;
-}
-
-function applyArguments(func, args) {
-  return func.apply(null, args);
-}
-
-var is = {
-  arr: function (a) { return Array.isArray(a); },
-  obj: function (a) { return stringContains(Object.prototype.toString.call(a), 'Object'); },
-  pth: function (a) { return is.obj(a) && a.hasOwnProperty('totalLength'); },
-  svg: function (a) { return a instanceof SVGElement; },
-  inp: function (a) { return a instanceof HTMLInputElement; },
-  dom: function (a) { return a.nodeType || is.svg(a); },
-  str: function (a) { return typeof a === 'string'; },
-  fnc: function (a) { return typeof a === 'function'; },
-  und: function (a) { return typeof a === 'undefined'; },
-  nil: function (a) { return is.und(a) || a === null; },
-  hex: function (a) { return /(^#[0-9A-F]{6}$)|(^#[0-9A-F]{3}$)/i.test(a); },
-  rgb: function (a) { return /^rgb/.test(a); },
-  hsl: function (a) { return /^hsl/.test(a); },
-  col: function (a) { return (is.hex(a) || is.rgb(a) || is.hsl(a)); },
-  key: function (a) { return !defaultInstanceSettings.hasOwnProperty(a) && !defaultTweenSettings.hasOwnProperty(a) && a !== 'targets' && a !== 'keyframes'; },
-};
-
-// Easings
-
-function parseEasingParameters(string) {
-  var match = /\(([^)]+)\)/.exec(string);
-  return match ? match[1].split(',').map(function (p) { return parseFloat(p); }) : [];
-}
-
-// Spring solver inspired by Webkit Copyright © 2016 Apple Inc. All rights reserved. https://webkit.org/demos/spring/spring.js
-
-function spring(string, duration) {
-
-  var params = parseEasingParameters(string);
-  var mass = minMax(is.und(params[0]) ? 1 : params[0], .1, 100);
-  var stiffness = minMax(is.und(params[1]) ? 100 : params[1], .1, 100);
-  var damping = minMax(is.und(params[2]) ? 10 : params[2], .1, 100);
-  var velocity =  minMax(is.und(params[3]) ? 0 : params[3], .1, 100);
-  var w0 = Math.sqrt(stiffness / mass);
-  var zeta = damping / (2 * Math.sqrt(stiffness * mass));
-  var wd = zeta < 1 ? w0 * Math.sqrt(1 - zeta * zeta) : 0;
-  var a = 1;
-  var b = zeta < 1 ? (zeta * w0 + -velocity) / wd : -velocity + w0;
-
-  function solver(t) {
-    var progress = duration ? (duration * t) / 1000 : t;
-    if (zeta < 1) {
-      progress = Math.exp(-progress * zeta * w0) * (a * Math.cos(wd * progress) + b * Math.sin(wd * progress));
-    } else {
-      progress = (a + b * progress) * Math.exp(-progress * w0);
-    }
-    if (t === 0 || t === 1) { return t; }
-    return 1 - progress;
-  }
-
-  function getDuration() {
-    var cached = cache.springs[string];
-    if (cached) { return cached; }
-    var frame = 1/6;
-    var elapsed = 0;
-    var rest = 0;
-    while(true) {
-      elapsed += frame;
-      if (solver(elapsed) === 1) {
-        rest++;
-        if (rest >= 16) { break; }
-      } else {
-        rest = 0;
-      }
-    }
-    var duration = elapsed * frame * 1000;
-    cache.springs[string] = duration;
-    return duration;
-  }
-
-  return duration ? solver : getDuration;
-
-}
-
-// Basic steps easing implementation https://developer.mozilla.org/fr/docs/Web/CSS/transition-timing-function
-
-function steps(steps) {
-  if ( steps === void 0 ) steps = 10;
-
-  return function (t) { return Math.ceil((minMax(t, 0.000001, 1)) * steps) * (1 / steps); };
-}
-
-// BezierEasing https://github.com/gre/bezier-easing
-
-var bezier = (function () {
-
-  var kSplineTableSize = 11;
-  var kSampleStepSize = 1.0 / (kSplineTableSize - 1.0);
-
-  function A(aA1, aA2) { return 1.0 - 3.0 * aA2 + 3.0 * aA1 }
-  function B(aA1, aA2) { return 3.0 * aA2 - 6.0 * aA1 }
-  function C(aA1)      { return 3.0 * aA1 }
-
-  function calcBezier(aT, aA1, aA2) { return ((A(aA1, aA2) * aT + B(aA1, aA2)) * aT + C(aA1)) * aT }
-  function getSlope(aT, aA1, aA2) { return 3.0 * A(aA1, aA2) * aT * aT + 2.0 * B(aA1, aA2) * aT + C(aA1) }
-
-  function binarySubdivide(aX, aA, aB, mX1, mX2) {
-    var currentX, currentT, i = 0;
-    do {
-      currentT = aA + (aB - aA) / 2.0;
-      currentX = calcBezier(currentT, mX1, mX2) - aX;
-      if (currentX > 0.0) { aB = currentT; } else { aA = currentT; }
-    } while (Math.abs(currentX) > 0.0000001 && ++i < 10);
-    return currentT;
-  }
-
-  function newtonRaphsonIterate(aX, aGuessT, mX1, mX2) {
-    for (var i = 0; i < 4; ++i) {
-      var currentSlope = getSlope(aGuessT, mX1, mX2);
-      if (currentSlope === 0.0) { return aGuessT; }
-      var currentX = calcBezier(aGuessT, mX1, mX2) - aX;
-      aGuessT -= currentX / currentSlope;
-    }
-    return aGuessT;
-  }
-
-  function bezier(mX1, mY1, mX2, mY2) {
-
-    if (!(0 <= mX1 && mX1 <= 1 && 0 <= mX2 && mX2 <= 1)) { return; }
-    var sampleValues = new Float32Array(kSplineTableSize);
-
-    if (mX1 !== mY1 || mX2 !== mY2) {
-      for (var i = 0; i < kSplineTableSize; ++i) {
-        sampleValues[i] = calcBezier(i * kSampleStepSize, mX1, mX2);
-      }
-    }
-
-    function getTForX(aX) {
-
-      var intervalStart = 0;
-      var currentSample = 1;
-      var lastSample = kSplineTableSize - 1;
-
-      for (; currentSample !== lastSample && sampleValues[currentSample] <= aX; ++currentSample) {
-        intervalStart += kSampleStepSize;
-      }
-
-      --currentSample;
-
-      var dist = (aX - sampleValues[currentSample]) / (sampleValues[currentSample + 1] - sampleValues[currentSample]);
-      var guessForT = intervalStart + dist * kSampleStepSize;
-      var initialSlope = getSlope(guessForT, mX1, mX2);
-
-      if (initialSlope >= 0.001) {
-        return newtonRaphsonIterate(aX, guessForT, mX1, mX2);
-      } else if (initialSlope === 0.0) {
-        return guessForT;
-      } else {
-        return binarySubdivide(aX, intervalStart, intervalStart + kSampleStepSize, mX1, mX2);
-      }
-
-    }
-
-    return function (x) {
-      if (mX1 === mY1 && mX2 === mY2) { return x; }
-      if (x === 0 || x === 1) { return x; }
-      return calcBezier(getTForX(x), mY1, mY2);
-    }
-
-  }
-
-  return bezier;
-
-})();
-
-var penner = (function () {
-
-  // Based on jQuery UI's implemenation of easing equations from Robert Penner (http://www.robertpenner.com/easing)
-
-  var eases = { linear: function () { return function (t) { return t; }; } };
-
-  var functionEasings = {
-    Sine: function () { return function (t) { return 1 - Math.cos(t * Math.PI / 2); }; },
-    Circ: function () { return function (t) { return 1 - Math.sqrt(1 - t * t); }; },
-    Back: function () { return function (t) { return t * t * (3 * t - 2); }; },
-    Bounce: function () { return function (t) {
-      var pow2, b = 4;
-      while (t < (( pow2 = Math.pow(2, --b)) - 1) / 11) {}
-      return 1 / Math.pow(4, 3 - b) - 7.5625 * Math.pow(( pow2 * 3 - 2 ) / 22 - t, 2)
-    }; },
-    Elastic: function (amplitude, period) {
-      if ( amplitude === void 0 ) amplitude = 1;
-      if ( period === void 0 ) period = .5;
-
-      var a = minMax(amplitude, 1, 10);
-      var p = minMax(period, .1, 2);
-      return function (t) {
-        return (t === 0 || t === 1) ? t : 
-          -a * Math.pow(2, 10 * (t - 1)) * Math.sin((((t - 1) - (p / (Math.PI * 2) * Math.asin(1 / a))) * (Math.PI * 2)) / p);
-      }
-    }
-  };
-
-  var baseEasings = ['Quad', 'Cubic', 'Quart', 'Quint', 'Expo'];
-
-  baseEasings.forEach(function (name, i) {
-    functionEasings[name] = function () { return function (t) { return Math.pow(t, i + 2); }; };
-  });
-
-  Object.keys(functionEasings).forEach(function (name) {
-    var easeIn = functionEasings[name];
-    eases['easeIn' + name] = easeIn;
-    eases['easeOut' + name] = function (a, b) { return function (t) { return 1 - easeIn(a, b)(1 - t); }; };
-    eases['easeInOut' + name] = function (a, b) { return function (t) { return t < 0.5 ? easeIn(a, b)(t * 2) / 2 : 
-      1 - easeIn(a, b)(t * -2 + 2) / 2; }; };
-    eases['easeOutIn' + name] = function (a, b) { return function (t) { return t < 0.5 ? (1 - easeIn(a, b)(1 - t * 2)) / 2 : 
-      (easeIn(a, b)(t * 2 - 1) + 1) / 2; }; };
-  });
-
-  return eases;
-
-})();
-
-function parseEasings(easing, duration) {
-  if (is.fnc(easing)) { return easing; }
-  var name = easing.split('(')[0];
-  var ease = penner[name];
-  var args = parseEasingParameters(easing);
-  switch (name) {
-    case 'spring' : return spring(easing, duration);
-    case 'cubicBezier' : return applyArguments(bezier, args);
-    case 'steps' : return applyArguments(steps, args);
-    default : return applyArguments(ease, args);
-  }
-}
-
-// Strings
-
-function selectString(str) {
-  try {
-    var nodes = document.querySelectorAll(str);
-    return nodes;
-  } catch(e) {
-    return;
-  }
-}
-
-// Arrays
-
-function filterArray(arr, callback) {
-  var len = arr.length;
-  var thisArg = arguments.length >= 2 ? arguments[1] : void 0;
-  var result = [];
-  for (var i = 0; i < len; i++) {
-    if (i in arr) {
-      var val = arr[i];
-      if (callback.call(thisArg, val, i, arr)) {
-        result.push(val);
-      }
-    }
-  }
-  return result;
-}
-
-function flattenArray(arr) {
-  return arr.reduce(function (a, b) { return a.concat(is.arr(b) ? flattenArray(b) : b); }, []);
-}
-
-function toArray(o) {
-  if (is.arr(o)) { return o; }
-  if (is.str(o)) { o = selectString(o) || o; }
-  if (o instanceof NodeList || o instanceof HTMLCollection) { return [].slice.call(o); }
-  return [o];
-}
-
-function arrayContains(arr, val) {
-  return arr.some(function (a) { return a === val; });
-}
-
-// Objects
-
-function cloneObject(o) {
-  var clone = {};
-  for (var p in o) { clone[p] = o[p]; }
-  return clone;
-}
-
-function replaceObjectProps(o1, o2) {
-  var o = cloneObject(o1);
-  for (var p in o1) { o[p] = o2.hasOwnProperty(p) ? o2[p] : o1[p]; }
-  return o;
-}
-
-function mergeObjects(o1, o2) {
-  var o = cloneObject(o1);
-  for (var p in o2) { o[p] = is.und(o1[p]) ? o2[p] : o1[p]; }
-  return o;
-}
-
-// Colors
-
-function rgbToRgba(rgbValue) {
-  var rgb = /rgb\((\d+,\s*[\d]+,\s*[\d]+)\)/g.exec(rgbValue);
-  return rgb ? ("rgba(" + (rgb[1]) + ",1)") : rgbValue;
-}
-
-function hexToRgba(hexValue) {
-  var rgx = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
-  var hex = hexValue.replace(rgx, function (m, r, g, b) { return r + r + g + g + b + b; } );
-  var rgb = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  var r = parseInt(rgb[1], 16);
-  var g = parseInt(rgb[2], 16);
-  var b = parseInt(rgb[3], 16);
-  return ("rgba(" + r + "," + g + "," + b + ",1)");
-}
-
-function hslToRgba(hslValue) {
-  var hsl = /hsl\((\d+),\s*([\d.]+)%,\s*([\d.]+)%\)/g.exec(hslValue) || /hsla\((\d+),\s*([\d.]+)%,\s*([\d.]+)%,\s*([\d.]+)\)/g.exec(hslValue);
-  var h = parseInt(hsl[1], 10) / 360;
-  var s = parseInt(hsl[2], 10) / 100;
-  var l = parseInt(hsl[3], 10) / 100;
-  var a = hsl[4] || 1;
-  function hue2rgb(p, q, t) {
-    if (t < 0) { t += 1; }
-    if (t > 1) { t -= 1; }
-    if (t < 1/6) { return p + (q - p) * 6 * t; }
-    if (t < 1/2) { return q; }
-    if (t < 2/3) { return p + (q - p) * (2/3 - t) * 6; }
-    return p;
-  }
-  var r, g, b;
-  if (s == 0) {
-    r = g = b = l;
-  } else {
-    var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-    var p = 2 * l - q;
-    r = hue2rgb(p, q, h + 1/3);
-    g = hue2rgb(p, q, h);
-    b = hue2rgb(p, q, h - 1/3);
-  }
-  return ("rgba(" + (r * 255) + "," + (g * 255) + "," + (b * 255) + "," + a + ")");
-}
-
-function colorToRgb(val) {
-  if (is.rgb(val)) { return rgbToRgba(val); }
-  if (is.hex(val)) { return hexToRgba(val); }
-  if (is.hsl(val)) { return hslToRgba(val); }
-}
-
-// Units
-
-function getUnit(val) {
-  var split = /[+-]?\d*\.?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?(%|px|pt|em|rem|in|cm|mm|ex|ch|pc|vw|vh|vmin|vmax|deg|rad|turn)?$/.exec(val);
-  if (split) { return split[1]; }
-}
-
-function getTransformUnit(propName) {
-  if (stringContains(propName, 'translate') || propName === 'perspective') { return 'px'; }
-  if (stringContains(propName, 'rotate') || stringContains(propName, 'skew')) { return 'deg'; }
-}
-
-// Values
-
-function getFunctionValue(val, animatable) {
-  if (!is.fnc(val)) { return val; }
-  return val(animatable.target, animatable.id, animatable.total);
-}
-
-function getAttribute(el, prop) {
-  return el.getAttribute(prop);
-}
-
-function convertPxToUnit(el, value, unit) {
-  var valueUnit = getUnit(value);
-  if (arrayContains([unit, 'deg', 'rad', 'turn'], valueUnit)) { return value; }
-  var cached = cache.CSS[value + unit];
-  if (!is.und(cached)) { return cached; }
-  var baseline = 100;
-  var tempEl = document.createElement(el.tagName);
-  var parentEl = (el.parentNode && (el.parentNode !== document)) ? el.parentNode : document.body;
-  parentEl.appendChild(tempEl);
-  tempEl.style.position = 'absolute';
-  tempEl.style.width = baseline + unit;
-  var factor = baseline / tempEl.offsetWidth;
-  parentEl.removeChild(tempEl);
-  var convertedUnit = factor * parseFloat(value);
-  cache.CSS[value + unit] = convertedUnit;
-  return convertedUnit;
-}
-
-function getCSSValue(el, prop, unit) {
-  if (prop in el.style) {
-    var uppercasePropName = prop.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-    var value = el.style[prop] || getComputedStyle(el).getPropertyValue(uppercasePropName) || '0';
-    return unit ? convertPxToUnit(el, value, unit) : value;
-  }
-}
-
-function getAnimationType(el, prop) {
-  if (is.dom(el) && !is.inp(el) && (!is.nil(getAttribute(el, prop)) || (is.svg(el) && el[prop]))) { return 'attribute'; }
-  if (is.dom(el) && arrayContains(validTransforms, prop)) { return 'transform'; }
-  if (is.dom(el) && (prop !== 'transform' && getCSSValue(el, prop))) { return 'css'; }
-  if (el[prop] != null) { return 'object'; }
-}
-
-function getElementTransforms(el) {
-  if (!is.dom(el)) { return; }
-  var str = el.style.transform || '';
-  var reg  = /(\w+)\(([^)]*)\)/g;
-  var transforms = new Map();
-  var m; while (m = reg.exec(str)) { transforms.set(m[1], m[2]); }
-  return transforms;
-}
-
-function getTransformValue(el, propName, animatable, unit) {
-  var defaultVal = stringContains(propName, 'scale') ? 1 : 0 + getTransformUnit(propName);
-  var value = getElementTransforms(el).get(propName) || defaultVal;
-  if (animatable) {
-    animatable.transforms.list.set(propName, value);
-    animatable.transforms['last'] = propName;
-  }
-  return unit ? convertPxToUnit(el, value, unit) : value;
-}
-
-function getOriginalTargetValue(target, propName, unit, animatable) {
-  switch (getAnimationType(target, propName)) {
-    case 'transform': return getTransformValue(target, propName, animatable, unit);
-    case 'css': return getCSSValue(target, propName, unit);
-    case 'attribute': return getAttribute(target, propName);
-    default: return target[propName] || 0;
-  }
-}
-
-function getRelativeValue(to, from) {
-  var operator = /^(\*=|\+=|-=)/.exec(to);
-  if (!operator) { return to; }
-  var u = getUnit(to) || 0;
-  var x = parseFloat(from);
-  var y = parseFloat(to.replace(operator[0], ''));
-  switch (operator[0][0]) {
-    case '+': return x + y + u;
-    case '-': return x - y + u;
-    case '*': return x * y + u;
-  }
-}
-
-function validateValue(val, unit) {
-  if (is.col(val)) { return colorToRgb(val); }
-  if (/\s/g.test(val)) { return val; }
-  var originalUnit = getUnit(val);
-  var unitLess = originalUnit ? val.substr(0, val.length - originalUnit.length) : val;
-  if (unit) { return unitLess + unit; }
-  return unitLess;
-}
-
-// getTotalLength() equivalent for circle, rect, polyline, polygon and line shapes
-// adapted from https://gist.github.com/SebLambla/3e0550c496c236709744
-
-function getDistance(p1, p2) {
-  return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
-}
-
-function getCircleLength(el) {
-  return Math.PI * 2 * getAttribute(el, 'r');
-}
-
-function getRectLength(el) {
-  return (getAttribute(el, 'width') * 2) + (getAttribute(el, 'height') * 2);
-}
-
-function getLineLength(el) {
-  return getDistance(
-    {x: getAttribute(el, 'x1'), y: getAttribute(el, 'y1')}, 
-    {x: getAttribute(el, 'x2'), y: getAttribute(el, 'y2')}
-  );
-}
-
-function getPolylineLength(el) {
-  var points = el.points;
-  var totalLength = 0;
-  var previousPos;
-  for (var i = 0 ; i < points.numberOfItems; i++) {
-    var currentPos = points.getItem(i);
-    if (i > 0) { totalLength += getDistance(previousPos, currentPos); }
-    previousPos = currentPos;
-  }
-  return totalLength;
-}
-
-function getPolygonLength(el) {
-  var points = el.points;
-  return getPolylineLength(el) + getDistance(points.getItem(points.numberOfItems - 1), points.getItem(0));
-}
-
-// Path animation
-
-function getTotalLength(el) {
-  if (el.getTotalLength) { return el.getTotalLength(); }
-  switch(el.tagName.toLowerCase()) {
-    case 'circle': return getCircleLength(el);
-    case 'rect': return getRectLength(el);
-    case 'line': return getLineLength(el);
-    case 'polyline': return getPolylineLength(el);
-    case 'polygon': return getPolygonLength(el);
-  }
-}
-
-function setDashoffset(el) {
-  var pathLength = getTotalLength(el);
-  el.setAttribute('stroke-dasharray', pathLength);
-  return pathLength;
-}
-
-// Motion path
-
-function getParentSvgEl(el) {
-  var parentEl = el.parentNode;
-  while (is.svg(parentEl)) {
-    if (!is.svg(parentEl.parentNode)) { break; }
-    parentEl = parentEl.parentNode;
-  }
-  return parentEl;
-}
-
-function getParentSvg(pathEl, svgData) {
-  var svg = svgData || {};
-  var parentSvgEl = svg.el || getParentSvgEl(pathEl);
-  var rect = parentSvgEl.getBoundingClientRect();
-  var viewBoxAttr = getAttribute(parentSvgEl, 'viewBox');
-  var width = rect.width;
-  var height = rect.height;
-  var viewBox = svg.viewBox || (viewBoxAttr ? viewBoxAttr.split(' ') : [0, 0, width, height]);
-  return {
-    el: parentSvgEl,
-    viewBox: viewBox,
-    x: viewBox[0] / 1,
-    y: viewBox[1] / 1,
-    w: width,
-    h: height,
-    vW: viewBox[2],
-    vH: viewBox[3]
-  }
-}
-
-function getPath(path, percent) {
-  var pathEl = is.str(path) ? selectString(path)[0] : path;
-  var p = percent || 100;
-  return function(property) {
-    return {
-      property: property,
-      el: pathEl,
-      svg: getParentSvg(pathEl),
-      totalLength: getTotalLength(pathEl) * (p / 100)
-    }
-  }
-}
-
-function getPathProgress(path, progress, isPathTargetInsideSVG) {
-  function point(offset) {
-    if ( offset === void 0 ) offset = 0;
-
-    var l = progress + offset >= 1 ? progress + offset : 0;
-    return path.el.getPointAtLength(l);
-  }
-  var svg = getParentSvg(path.el, path.svg);
-  var p = point();
-  var p0 = point(-1);
-  var p1 = point(+1);
-  var scaleX = isPathTargetInsideSVG ? 1 : svg.w / svg.vW;
-  var scaleY = isPathTargetInsideSVG ? 1 : svg.h / svg.vH;
-  switch (path.property) {
-    case 'x': return (p.x - svg.x) * scaleX;
-    case 'y': return (p.y - svg.y) * scaleY;
-    case 'angle': return Math.atan2(p1.y - p0.y, p1.x - p0.x) * 180 / Math.PI;
-  }
-}
-
-// Decompose value
-
-function decomposeValue(val, unit) {
-  // const rgx = /-?\d*\.?\d+/g; // handles basic numbers
-  // const rgx = /[+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g; // handles exponents notation
-  var rgx = /[+-]?\d*\.?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g; // handles exponents notation
-  var value = validateValue((is.pth(val) ? val.totalLength : val), unit) + '';
-  return {
-    original: value,
-    numbers: value.match(rgx) ? value.match(rgx).map(Number) : [0],
-    strings: (is.str(val) || unit) ? value.split(rgx) : []
-  }
-}
-
-// Animatables
-
-function parseTargets(targets) {
-  var targetsArray = targets ? (flattenArray(is.arr(targets) ? targets.map(toArray) : toArray(targets))) : [];
-  return filterArray(targetsArray, function (item, pos, self) { return self.indexOf(item) === pos; });
-}
-
-function getAnimatables(targets) {
-  var parsed = parseTargets(targets);
-  return parsed.map(function (t, i) {
-    return {target: t, id: i, total: parsed.length, transforms: { list: getElementTransforms(t) } };
-  });
-}
-
-// Properties
-
-function normalizePropertyTweens(prop, tweenSettings) {
-  var settings = cloneObject(tweenSettings);
-  // Override duration if easing is a spring
-  if (/^spring/.test(settings.easing)) { settings.duration = spring(settings.easing); }
-  if (is.arr(prop)) {
-    var l = prop.length;
-    var isFromTo = (l === 2 && !is.obj(prop[0]));
-    if (!isFromTo) {
-      // Duration divided by the number of tweens
-      if (!is.fnc(tweenSettings.duration)) { settings.duration = tweenSettings.duration / l; }
-    } else {
-      // Transform [from, to] values shorthand to a valid tween value
-      prop = {value: prop};
-    }
-  }
-  var propArray = is.arr(prop) ? prop : [prop];
-  return propArray.map(function (v, i) {
-    var obj = (is.obj(v) && !is.pth(v)) ? v : {value: v};
-    // Default delay value should only be applied to the first tween
-    if (is.und(obj.delay)) { obj.delay = !i ? tweenSettings.delay : 0; }
-    // Default endDelay value should only be applied to the last tween
-    if (is.und(obj.endDelay)) { obj.endDelay = i === propArray.length - 1 ? tweenSettings.endDelay : 0; }
-    return obj;
-  }).map(function (k) { return mergeObjects(k, settings); });
-}
-
-
-function flattenKeyframes(keyframes) {
-  var propertyNames = filterArray(flattenArray(keyframes.map(function (key) { return Object.keys(key); })), function (p) { return is.key(p); })
-  .reduce(function (a,b) { if (a.indexOf(b) < 0) { a.push(b); } return a; }, []);
-  var properties = {};
-  var loop = function ( i ) {
-    var propName = propertyNames[i];
-    properties[propName] = keyframes.map(function (key) {
-      var newKey = {};
-      for (var p in key) {
-        if (is.key(p)) {
-          if (p == propName) { newKey.value = key[p]; }
-        } else {
-          newKey[p] = key[p];
-        }
-      }
-      return newKey;
-    });
-  };
-
-  for (var i = 0; i < propertyNames.length; i++) loop( i );
-  return properties;
-}
-
-function getProperties(tweenSettings, params) {
-  var properties = [];
-  var keyframes = params.keyframes;
-  if (keyframes) { params = mergeObjects(flattenKeyframes(keyframes), params); }
-  for (var p in params) {
-    if (is.key(p)) {
-      properties.push({
-        name: p,
-        tweens: normalizePropertyTweens(params[p], tweenSettings)
-      });
-    }
-  }
-  return properties;
-}
-
-// Tweens
-
-function normalizeTweenValues(tween, animatable) {
-  var t = {};
-  for (var p in tween) {
-    var value = getFunctionValue(tween[p], animatable);
-    if (is.arr(value)) {
-      value = value.map(function (v) { return getFunctionValue(v, animatable); });
-      if (value.length === 1) { value = value[0]; }
-    }
-    t[p] = value;
-  }
-  t.duration = parseFloat(t.duration);
-  t.delay = parseFloat(t.delay);
-  return t;
-}
-
-function normalizeTweens(prop, animatable) {
-  var previousTween;
-  return prop.tweens.map(function (t) {
-    var tween = normalizeTweenValues(t, animatable);
-    var tweenValue = tween.value;
-    var to = is.arr(tweenValue) ? tweenValue[1] : tweenValue;
-    var toUnit = getUnit(to);
-    var originalValue = getOriginalTargetValue(animatable.target, prop.name, toUnit, animatable);
-    var previousValue = previousTween ? previousTween.to.original : originalValue;
-    var from = is.arr(tweenValue) ? tweenValue[0] : previousValue;
-    var fromUnit = getUnit(from) || getUnit(originalValue);
-    var unit = toUnit || fromUnit;
-    if (is.und(to)) { to = previousValue; }
-    tween.from = decomposeValue(from, unit);
-    tween.to = decomposeValue(getRelativeValue(to, from), unit);
-    tween.start = previousTween ? previousTween.end : 0;
-    tween.end = tween.start + tween.delay + tween.duration + tween.endDelay;
-    tween.easing = parseEasings(tween.easing, tween.duration);
-    tween.isPath = is.pth(tweenValue);
-    tween.isPathTargetInsideSVG = tween.isPath && is.svg(animatable.target);
-    tween.isColor = is.col(tween.from.original);
-    if (tween.isColor) { tween.round = 1; }
-    previousTween = tween;
-    return tween;
-  });
-}
-
-// Tween progress
-
-var setProgressValue = {
-  css: function (t, p, v) { return t.style[p] = v; },
-  attribute: function (t, p, v) { return t.setAttribute(p, v); },
-  object: function (t, p, v) { return t[p] = v; },
-  transform: function (t, p, v, transforms, manual) {
-    transforms.list.set(p, v);
-    if (p === transforms.last || manual) {
-      var str = '';
-      transforms.list.forEach(function (value, prop) { str += prop + "(" + value + ") "; });
-      t.style.transform = str;
-    }
-  }
-};
-
-// Set Value helper
-
-function setTargetsValue(targets, properties) {
-  var animatables = getAnimatables(targets);
-  animatables.forEach(function (animatable) {
-    for (var property in properties) {
-      var value = getFunctionValue(properties[property], animatable);
-      var target = animatable.target;
-      var valueUnit = getUnit(value);
-      var originalValue = getOriginalTargetValue(target, property, valueUnit, animatable);
-      var unit = valueUnit || getUnit(originalValue);
-      var to = getRelativeValue(validateValue(value, unit), originalValue);
-      var animType = getAnimationType(target, property);
-      setProgressValue[animType](target, property, to, animatable.transforms, true);
-    }
-  });
-}
-
-// Animations
-
-function createAnimation(animatable, prop) {
-  var animType = getAnimationType(animatable.target, prop.name);
-  if (animType) {
-    var tweens = normalizeTweens(prop, animatable);
-    var lastTween = tweens[tweens.length - 1];
-    return {
-      type: animType,
-      property: prop.name,
-      animatable: animatable,
-      tweens: tweens,
-      duration: lastTween.end,
-      delay: tweens[0].delay,
-      endDelay: lastTween.endDelay
-    }
-  }
-}
-
-function getAnimations(animatables, properties) {
-  return filterArray(flattenArray(animatables.map(function (animatable) {
-    return properties.map(function (prop) {
-      return createAnimation(animatable, prop);
-    });
-  })), function (a) { return !is.und(a); });
-}
-
-// Create Instance
-
-function getInstanceTimings(animations, tweenSettings) {
-  var animLength = animations.length;
-  var getTlOffset = function (anim) { return anim.timelineOffset ? anim.timelineOffset : 0; };
-  var timings = {};
-  timings.duration = animLength ? Math.max.apply(Math, animations.map(function (anim) { return getTlOffset(anim) + anim.duration; })) : tweenSettings.duration;
-  timings.delay = animLength ? Math.min.apply(Math, animations.map(function (anim) { return getTlOffset(anim) + anim.delay; })) : tweenSettings.delay;
-  timings.endDelay = animLength ? timings.duration - Math.max.apply(Math, animations.map(function (anim) { return getTlOffset(anim) + anim.duration - anim.endDelay; })) : tweenSettings.endDelay;
-  return timings;
-}
-
-var instanceID = 0;
-
-function createNewInstance(params) {
-  var instanceSettings = replaceObjectProps(defaultInstanceSettings, params);
-  var tweenSettings = replaceObjectProps(defaultTweenSettings, params);
-  var properties = getProperties(tweenSettings, params);
-  var animatables = getAnimatables(params.targets);
-  var animations = getAnimations(animatables, properties);
-  var timings = getInstanceTimings(animations, tweenSettings);
-  var id = instanceID;
-  instanceID++;
-  return mergeObjects(instanceSettings, {
-    id: id,
-    children: [],
-    animatables: animatables,
-    animations: animations,
-    duration: timings.duration,
-    delay: timings.delay,
-    endDelay: timings.endDelay
-  });
-}
-
-// Core
-
-var activeInstances = [];
-
-var engine = (function () {
-  var raf;
-
-  function play() {
-    if (!raf && (!isDocumentHidden() || !anime.suspendWhenDocumentHidden) && activeInstances.length > 0) {
-      raf = requestAnimationFrame(step);
-    }
-  }
-  function step(t) {
-    // memo on algorithm issue:
-    // dangerous iteration over mutable `activeInstances`
-    // (that collection may be updated from within callbacks of `tick`-ed animation instances)
-    var activeInstancesLength = activeInstances.length;
-    var i = 0;
-    while (i < activeInstancesLength) {
-      var activeInstance = activeInstances[i];
-      if (!activeInstance.paused) {
-        activeInstance.tick(t);
-        i++;
-      } else {
-        activeInstances.splice(i, 1);
-        activeInstancesLength--;
-      }
-    }
-    raf = i > 0 ? requestAnimationFrame(step) : undefined;
-  }
-
-  function handleVisibilityChange() {
-    if (!anime.suspendWhenDocumentHidden) { return; }
-
-    if (isDocumentHidden()) {
-      // suspend ticks
-      raf = cancelAnimationFrame(raf);
-    } else { // is back to active tab
-      // first adjust animations to consider the time that ticks were suspended
-      activeInstances.forEach(
-        function (instance) { return instance ._onDocumentVisibility(); }
-      );
-      engine();
-    }
-  }
-  if (typeof document !== 'undefined') {
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-  }
-
-  return play;
-})();
-
-function isDocumentHidden() {
-  return !!document && document.hidden;
-}
-
-// Public Instance
-
-function anime(params) {
-  if ( params === void 0 ) params = {};
-
-
-  var startTime = 0, lastTime = 0, now = 0;
-  var children, childrenLength = 0;
-  var resolve = null;
-
-  function makePromise(instance) {
-    var promise = window.Promise && new Promise(function (_resolve) { return resolve = _resolve; });
-    instance.finished = promise;
-    return promise;
-  }
-
-  var instance = createNewInstance(params);
-  var promise = makePromise(instance);
-
-  function toggleInstanceDirection() {
-    var direction = instance.direction;
-    if (direction !== 'alternate') {
-      instance.direction = direction !== 'normal' ? 'normal' : 'reverse';
-    }
-    instance.reversed = !instance.reversed;
-    children.forEach(function (child) { return child.reversed = instance.reversed; });
-  }
-
-  function adjustTime(time) {
-    return instance.reversed ? instance.duration - time : time;
-  }
-
-  function resetTime() {
-    startTime = 0;
-    lastTime = adjustTime(instance.currentTime) * (1 / anime.speed);
-  }
-
-  function seekChild(time, child) {
-    if (child) { child.seek(time - child.timelineOffset); }
-  }
-
-  function syncInstanceChildren(time) {
-    if (!instance.reversePlayback) {
-      for (var i = 0; i < childrenLength; i++) { seekChild(time, children[i]); }
-    } else {
-      for (var i$1 = childrenLength; i$1--;) { seekChild(time, children[i$1]); }
-    }
-  }
-
-  function setAnimationsProgress(insTime) {
-    var i = 0;
-    var animations = instance.animations;
-    var animationsLength = animations.length;
-    while (i < animationsLength) {
-      var anim = animations[i];
-      var animatable = anim.animatable;
-      var tweens = anim.tweens;
-      var tweenLength = tweens.length - 1;
-      var tween = tweens[tweenLength];
-      // Only check for keyframes if there is more than one tween
-      if (tweenLength) { tween = filterArray(tweens, function (t) { return (insTime < t.end); })[0] || tween; }
-      var elapsed = minMax(insTime - tween.start - tween.delay, 0, tween.duration) / tween.duration;
-      var eased = isNaN(elapsed) ? 1 : tween.easing(elapsed);
-      var strings = tween.to.strings;
-      var round = tween.round;
-      var numbers = [];
-      var toNumbersLength = tween.to.numbers.length;
-      var progress = (void 0);
-      for (var n = 0; n < toNumbersLength; n++) {
-        var value = (void 0);
-        var toNumber = tween.to.numbers[n];
-        var fromNumber = tween.from.numbers[n] || 0;
-        if (!tween.isPath) {
-          value = fromNumber + (eased * (toNumber - fromNumber));
-        } else {
-          value = getPathProgress(tween.value, eased * toNumber, tween.isPathTargetInsideSVG);
-        }
-        if (round) {
-          if (!(tween.isColor && n > 2)) {
-            value = Math.round(value * round) / round;
-          }
-        }
-        numbers.push(value);
-      }
-      // Manual Array.reduce for better performances
-      var stringsLength = strings.length;
-      if (!stringsLength) {
-        progress = numbers[0];
-      } else {
-        progress = strings[0];
-        for (var s = 0; s < stringsLength; s++) {
-          var a = strings[s];
-          var b = strings[s + 1];
-          var n$1 = numbers[s];
-          if (!isNaN(n$1)) {
-            if (!b) {
-              progress += n$1 + ' ';
-            } else {
-              progress += n$1 + b;
-            }
-          }
-        }
-      }
-      setProgressValue[anim.type](animatable.target, anim.property, progress, animatable.transforms);
-      anim.currentValue = progress;
-      i++;
-    }
-  }
-
-  function setCallback(cb) {
-    if (instance[cb] && !instance.passThrough) { instance[cb](instance); }
-  }
-
-  function countIteration() {
-    if (instance.remaining && instance.remaining !== true) {
-      instance.remaining--;
-    }
-  }
-
-  function setInstanceProgress(engineTime) {
-    var insDuration = instance.duration;
-    var insDelay = instance.delay;
-    var insEndDelay = insDuration - instance.endDelay;
-    var insTime = adjustTime(engineTime);
-    instance.progress = minMax((insTime / insDuration) * 100, 0, 100);
-    instance.reversePlayback = insTime < instance.currentTime;
-    if (children) { syncInstanceChildren(insTime); }
-    if (!instance.began && instance.currentTime > 0) {
-      instance.began = true;
-      setCallback('begin');
-    }
-    if (!instance.loopBegan && instance.currentTime > 0) {
-      instance.loopBegan = true;
-      setCallback('loopBegin');
-    }
-    if (insTime <= insDelay && instance.currentTime !== 0) {
-      setAnimationsProgress(0);
-    }
-    if ((insTime >= insEndDelay && instance.currentTime !== insDuration) || !insDuration) {
-      setAnimationsProgress(insDuration);
-    }
-    if (insTime > insDelay && insTime < insEndDelay) {
-      if (!instance.changeBegan) {
-        instance.changeBegan = true;
-        instance.changeCompleted = false;
-        setCallback('changeBegin');
-      }
-      setCallback('change');
-      setAnimationsProgress(insTime);
-    } else {
-      if (instance.changeBegan) {
-        instance.changeCompleted = true;
-        instance.changeBegan = false;
-        setCallback('changeComplete');
-      }
-    }
-    instance.currentTime = minMax(insTime, 0, insDuration);
-    if (instance.began) { setCallback('update'); }
-    if (engineTime >= insDuration) {
-      lastTime = 0;
-      countIteration();
-      if (!instance.remaining) {
-        instance.paused = true;
-        if (!instance.completed) {
-          instance.completed = true;
-          setCallback('loopComplete');
-          setCallback('complete');
-          if (!instance.passThrough && 'Promise' in window) {
-            resolve();
-            promise = makePromise(instance);
-          }
-        }
-      } else {
-        startTime = now;
-        setCallback('loopComplete');
-        instance.loopBegan = false;
-        if (instance.direction === 'alternate') {
-          toggleInstanceDirection();
-        }
-      }
-    }
-  }
-
-  instance.reset = function() {
-    var direction = instance.direction;
-    instance.passThrough = false;
-    instance.currentTime = 0;
-    instance.progress = 0;
-    instance.paused = true;
-    instance.began = false;
-    instance.loopBegan = false;
-    instance.changeBegan = false;
-    instance.completed = false;
-    instance.changeCompleted = false;
-    instance.reversePlayback = false;
-    instance.reversed = direction === 'reverse';
-    instance.remaining = instance.loop;
-    children = instance.children;
-    childrenLength = children.length;
-    for (var i = childrenLength; i--;) { instance.children[i].reset(); }
-    if (instance.reversed && instance.loop !== true || (direction === 'alternate' && instance.loop === 1)) { instance.remaining++; }
-    setAnimationsProgress(instance.reversed ? instance.duration : 0);
-  };
-
-  // internal method (for engine) to adjust animation timings before restoring engine ticks (rAF)
-  instance._onDocumentVisibility = resetTime;
-
-  // Set Value helper
-
-  instance.set = function(targets, properties) {
-    setTargetsValue(targets, properties);
-    return instance;
-  };
-
-  instance.tick = function(t) {
-    now = t;
-    if (!startTime) { startTime = now; }
-    setInstanceProgress((now + (lastTime - startTime)) * anime.speed);
-  };
-
-  instance.seek = function(time) {
-    setInstanceProgress(adjustTime(time));
-  };
-
-  instance.pause = function() {
-    instance.paused = true;
-    resetTime();
-  };
-
-  instance.play = function() {
-    if (!instance.paused) { return; }
-    if (instance.completed) { instance.reset(); }
-    instance.paused = false;
-    activeInstances.push(instance);
-    resetTime();
-    engine();
-  };
-
-  instance.reverse = function() {
-    toggleInstanceDirection();
-    instance.completed = instance.reversed ? false : true;
-    resetTime();
-  };
-
-  instance.restart = function() {
-    instance.reset();
-    instance.play();
-  };
-
-  instance.remove = function(targets) {
-    var targetsArray = parseTargets(targets);
-    removeTargetsFromInstance(targetsArray, instance);
-  };
-
-  instance.reset();
-
-  if (instance.autoplay) { instance.play(); }
-
-  return instance;
-
-}
-
-// Remove targets from animation
-
-function removeTargetsFromAnimations(targetsArray, animations) {
-  for (var a = animations.length; a--;) {
-    if (arrayContains(targetsArray, animations[a].animatable.target)) {
-      animations.splice(a, 1);
-    }
-  }
-}
-
-function removeTargetsFromInstance(targetsArray, instance) {
-  var animations = instance.animations;
-  var children = instance.children;
-  removeTargetsFromAnimations(targetsArray, animations);
-  for (var c = children.length; c--;) {
-    var child = children[c];
-    var childAnimations = child.animations;
-    removeTargetsFromAnimations(targetsArray, childAnimations);
-    if (!childAnimations.length && !child.children.length) { children.splice(c, 1); }
-  }
-  if (!animations.length && !children.length) { instance.pause(); }
-}
-
-function removeTargetsFromActiveInstances(targets) {
-  var targetsArray = parseTargets(targets);
-  for (var i = activeInstances.length; i--;) {
-    var instance = activeInstances[i];
-    removeTargetsFromInstance(targetsArray, instance);
-  }
-}
-
-// Stagger helpers
-
-function stagger(val, params) {
-  if ( params === void 0 ) params = {};
-
-  var direction = params.direction || 'normal';
-  var easing = params.easing ? parseEasings(params.easing) : null;
-  var grid = params.grid;
-  var axis = params.axis;
-  var fromIndex = params.from || 0;
-  var fromFirst = fromIndex === 'first';
-  var fromCenter = fromIndex === 'center';
-  var fromLast = fromIndex === 'last';
-  var isRange = is.arr(val);
-  var val1 = isRange ? parseFloat(val[0]) : parseFloat(val);
-  var val2 = isRange ? parseFloat(val[1]) : 0;
-  var unit = getUnit(isRange ? val[1] : val) || 0;
-  var start = params.start || 0 + (isRange ? val1 : 0);
-  var values = [];
-  var maxValue = 0;
-  return function (el, i, t) {
-    if (fromFirst) { fromIndex = 0; }
-    if (fromCenter) { fromIndex = (t - 1) / 2; }
-    if (fromLast) { fromIndex = t - 1; }
-    if (!values.length) {
-      for (var index = 0; index < t; index++) {
-        if (!grid) {
-          values.push(Math.abs(fromIndex - index));
-        } else {
-          var fromX = !fromCenter ? fromIndex%grid[0] : (grid[0]-1)/2;
-          var fromY = !fromCenter ? Math.floor(fromIndex/grid[0]) : (grid[1]-1)/2;
-          var toX = index%grid[0];
-          var toY = Math.floor(index/grid[0]);
-          var distanceX = fromX - toX;
-          var distanceY = fromY - toY;
-          var value = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
-          if (axis === 'x') { value = -distanceX; }
-          if (axis === 'y') { value = -distanceY; }
-          values.push(value);
-        }
-        maxValue = Math.max.apply(Math, values);
-      }
-      if (easing) { values = values.map(function (val) { return easing(val / maxValue) * maxValue; }); }
-      if (direction === 'reverse') { values = values.map(function (val) { return axis ? (val < 0) ? val * -1 : -val : Math.abs(maxValue - val); }); }
-    }
-    var spacing = isRange ? (val2 - val1) / maxValue : val1;
-    return start + (spacing * (Math.round(values[i] * 100) / 100)) + unit;
-  }
-}
-
-// Timeline
-
-function timeline(params) {
-  if ( params === void 0 ) params = {};
-
-  var tl = anime(params);
-  tl.duration = 0;
-  tl.add = function(instanceParams, timelineOffset) {
-    var tlIndex = activeInstances.indexOf(tl);
-    var children = tl.children;
-    if (tlIndex > -1) { activeInstances.splice(tlIndex, 1); }
-    function passThrough(ins) { ins.passThrough = true; }
-    for (var i = 0; i < children.length; i++) { passThrough(children[i]); }
-    var insParams = mergeObjects(instanceParams, replaceObjectProps(defaultTweenSettings, params));
-    insParams.targets = insParams.targets || params.targets;
-    var tlDuration = tl.duration;
-    insParams.autoplay = false;
-    insParams.direction = tl.direction;
-    insParams.timelineOffset = is.und(timelineOffset) ? tlDuration : getRelativeValue(timelineOffset, tlDuration);
-    passThrough(tl);
-    tl.seek(insParams.timelineOffset);
-    var ins = anime(insParams);
-    passThrough(ins);
-    children.push(ins);
-    var timings = getInstanceTimings(children, params);
-    tl.delay = timings.delay;
-    tl.endDelay = timings.endDelay;
-    tl.duration = timings.duration;
-    tl.seek(0);
-    tl.reset();
-    if (tl.autoplay) { tl.play(); }
-    return tl;
-  };
-  return tl;
-}
-
-anime.version = '3.2.1';
-anime.speed = 1;
-// TODO:#review: naming, documentation
-anime.suspendWhenDocumentHidden = true;
-anime.running = activeInstances;
-anime.remove = removeTargetsFromActiveInstances;
-anime.get = getOriginalTargetValue;
-anime.set = setTargetsValue;
-anime.convertPx = convertPxToUnit;
-anime.path = getPath;
-anime.setDashoffset = setDashoffset;
-anime.stagger = stagger;
-anime.timeline = timeline;
-anime.easing = parseEasings;
-anime.penner = penner;
-anime.random = function (min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; };
-
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (anime);
-
+/***/ "./src/assets/beatmaps/beatmap1.js":
+/*!*****************************************!*\
+  !*** ./src/assets/beatmaps/beatmap1.js ***!
+  \*****************************************/
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/***/ ((module) => {
+
+var Beatmap = [{
+  pos: [0.5, 0.5],
+  time: 2380
+}, {
+  pos: [0.55068, 0.49804],
+  time: 2940
+}, {
+  pos: [0.525795, 0.547495],
+  time: 3570
+}, {
+  pos: [0.591285, 0.619475],
+  time: 4160
+}, {
+  pos: [0.53553, 0.569325],
+  time: 4750
+}, {
+  pos: [0.52635, 0.57264],
+  time: 5260
+}, {
+  pos: [0.48202, 0.61511],
+  time: 5880
+}, {
+  pos: [0.51506, 0.54313],
+  time: 6470
+}, {
+  pos: [0.59176, 0.61268],
+  time: 7120
+}, {
+  pos: [0.64944, 0.67568],
+  time: 7680
+}, {
+  pos: [0.68106, 0.67599],
+  time: 8300
+}, {
+  pos: [0.7176, 0.70497],
+  time: 8930
+}, {
+  pos: [0.77836, 0.74389],
+  time: 9490
+}, {
+  pos: [0.80524, 0.71029],
+  time: 10050
+}, {
+  pos: [0.764065, 0.708155],
+  time: 10660
+}, {
+  pos: [0.70453, 0.70973],
+  time: 11290
+}, {
+  pos: [0.71461, 0.77721],
+  time: 11850
+}, {
+  pos: [0.70351, 0.84171],
+  time: 12450
+}, {
+  pos: [0.63743, 0.9],
+  time: 13040
+}, {
+  pos: [0.59377, 0.87699],
+  time: 13630
+}, {
+  pos: [0.56521, 0.9],
+  time: 14190
+}, {
+  pos: [0.546605, 0.88719],
+  time: 14800
+}, {
+  pos: [0.586925, 0.83049],
+  time: 15430
+}, {
+  pos: [0.616045, 0.78121],
+  time: 15990
+}, {
+  pos: [0.628945, 0.78001],
+  time: 16590
+}, {
+  pos: [0.677745, 0.779705],
+  time: 17200
+}, {
+  pos: [0.693425, 0.783065],
+  time: 17760
+}, {
+  pos: [0.749425, 0.815065],
+  time: 18400
+}, {
+  pos: [0.799335, 0.749035],
+  time: 19020
+}, {
+  pos: [0.789535, 0.814275],
+  time: 19580
+}, {
+  pos: [0.73624, 0.756135],
+  time: 20150
+}, {
+  pos: [0.80464, 0.750435],
+  time: 20720
+}, {
+  pos: [0.74974, 0.738135],
+  time: 21320
+}, {
+  pos: [0.70608, 0.795365],
+  time: 21910
+}, {
+  pos: [0.732855, 0.83852],
+  time: 22540
+}, {
+  pos: [0.723255, 0.84602],
+  time: 23140
+}, {
+  pos: [0.660535, 0.8869],
+  time: 23700
+}, {
+  pos: [0.652865, 0.859465],
+  time: 24290
+}, {
+  pos: [0.687515, 0.9],
+  time: 24950
+}, {
+  pos: [0.707815, 0.85418],
+  time: 25530
+}, {
+  pos: [0.703465, 0.89101],
+  time: 26110
+}, {
+  pos: [0.670465, 0.88331],
+  time: 26660
+}, {
+  pos: [0.626305, 0.9],
+  time: 27300
+}, {
+  pos: [0.614825, 0.86052],
+  time: 27860
+}, {
+  pos: [0.66176, 0.82146],
+  time: 28490
+}, {
+  pos: [0.60134, 0.881025],
+  time: 29060
+}, {
+  pos: [0.66014, 0.873825],
+  time: 29660
+}, {
+  pos: [0.63554, 0.864525],
+  time: 30260
+}, {
+  pos: [0.671835, 0.9],
+  time: 30870
+}, {
+  pos: [0.643935, 0.8331],
+  time: 31470
+}, {
+  pos: [0.609135, 0.78],
+  time: 32070
+}, {
+  pos: [0.673535, 0.75452],
+  time: 32630
+}, {
+  pos: [0.726735, 0.80128],
+  time: 33190
+}, {
+  pos: [0.756435, 0.75808],
+  time: 33790
+}, {
+  pos: [0.69186, 0.729415],
+  time: 34420
+}, {
+  pos: [0.74114, 0.736415],
+  time: 34980
+}, {
+  pos: [0.75586, 0.763935],
+  time: 35620
+}, {
+  pos: [0.744035, 0.701785],
+  time: 36170
+}, {
+  pos: [0.683035, 0.76004],
+  time: 36780
+}, {
+  pos: [0.726695, 0.78187],
+  time: 37370
+}, {
+  pos: [0.783395, 0.81877],
+  time: 37970
+}, {
+  pos: [0.747235, 0.74421],
+  time: 38610
+}, {
+  pos: [0.77281, 0.765385],
+  time: 39160
+}, {
+  pos: [0.81022, 0.816715],
+  time: 39740
+}, {
+  pos: [0.84802, 0.860115],
+  time: 40300
+}, {
+  pos: [0.9, 0.897405],
+  time: 40960
+}, {
+  pos: [0.9, 0.896745],
+  time: 41620
+}, {
+  pos: [0.9, 0.9],
+  time: 42160
+}, {
+  pos: [0.8659, 0.84544],
+  time: 42780
+}, {
+  pos: [0.9, 0.824395],
+  time: 43390
+}, {
+  pos: [0.9, 0.874275],
+  time: 43970
+}, {
+  pos: [0.9, 0.858595],
+  time: 44530
+}, {
+  pos: [0.9, 0.86401],
+  time: 45100
+}, {
+  pos: [0.9, 0.9],
+  time: 45670
+}, {
+  pos: [0.8664, 0.83088],
+  time: 46310
+}, {
+  pos: [0.83952, 0.80304],
+  time: 46950
+}, {
+  pos: [0.87165, 0.74082],
+  time: 47460
+}, {
+  pos: [0.85426, 0.744705],
+  time: 47830
+}, {
+  pos: [0.87653, 0.779895],
+  time: 48170
+}, {
+  pos: [0.85463, 0.769995],
+  time: 48470
+}, {
+  pos: [0.86663, 0.765045],
+  time: 48770
+}, {
+  pos: [0.85439, 0.739005],
+  time: 49010
+}, {
+  pos: [0.83496, 0.70464],
+  time: 49300
+}, {
+  pos: [0.87371, 0.67664],
+  time: 49800
+}, {
+  pos: [0.87052, 0.66446],
+  time: 50090
+}, {
+  pos: [0.89865, 0.668665],
+  time: 50380
+}, {
+  pos: [0.888885, 0.70447],
+  time: 50690
+}, {
+  pos: [0.86397, 0.69028],
+  time: 51020
+}, {
+  pos: [0.87189, 0.675265],
+  time: 51350
+}, {
+  pos: [0.889875, 0.656785],
+  time: 51680
+}, {
+  pos: [0.838375, 0.680285],
+  time: 52180
+}, {
+  pos: [0.856575, 0.658865],
+  time: 52460
+}, {
+  pos: [0.822835, 0.676645],
+  time: 52740
+}, {
+  pos: [0.855135, 0.706055],
+  time: 53080
+}, {
+  pos: [0.86901, 0.705315],
+  time: 53450
+}, {
+  pos: [0.868575, 0.698065],
+  time: 53740
+}, {
+  pos: [0.880045, 0.685355],
+  time: 54050
+}, {
+  pos: [0.857965, 0.702875],
+  time: 54530
+}, {
+  pos: [0.889315, 0.717125],
+  time: 54830
+}, {
+  pos: [0.9, 0.703795],
+  time: 55140
+}, {
+  pos: [0.89835, 0.668485],
+  time: 55470
+}, {
+  pos: [0.86415, 0.658735],
+  time: 55770
+}, {
+  pos: [0.83676, 0.69685],
+  time: 56100
+}, {
+  pos: [0.86415, 0.67342],
+  time: 56430
+}, {
+  pos: [0.834775, 0.645455],
+  time: 56900
+}, {
+  pos: [0.801325, 0.668705],
+  time: 57200
+}, {
+  pos: [0.810925, 0.663585],
+  time: 57520
+}, {
+  pos: [0.8222, 0.683675],
+  time: 57930
+}, {
+  pos: [0.8144, 0.690825],
+  time: 58190
+}, {
+  pos: [0.80628, 0.708185],
+  time: 58470
+}, {
+  pos: [0.81123, 0.67007],
+  time: 58800
+}, {
+  pos: [0.84131, 0.64892],
+  time: 59270
+}, {
+  pos: [0.840295, 0.621225],
+  time: 59560
+}, {
+  pos: [0.873745, 0.608775],
+  time: 59860
+}, {
+  pos: [0.885475, 0.603505],
+  time: 60200
+}, {
+  pos: [0.898435, 0.587575],
+  time: 60470
+}, {
+  pos: [0.889435, 0.564375],
+  time: 60870
+}, {
+  pos: [0.894715, 0.589335],
+  time: 61190
+}, {
+  pos: [0.882465, 0.636375],
+  time: 61680
+}, {
+  pos: [0.856205, 0.618825],
+  time: 61940
+}, {
+  pos: [0.83547, 0.639995],
+  time: 62230
+}, {
+  pos: [0.79416, 0.633875],
+  time: 62570
+}, {
+  pos: [0.81558, 0.654615],
+  time: 62910
+}, {
+  pos: [0.816045, 0.64237],
+  time: 63220
+}, {
+  pos: [0.820805, 0.66192],
+  time: 63560
+}, {
+  pos: [0.805955, 0.65427],
+  time: 64010
+}, {
+  pos: [0.809985, 0.624975],
+  time: 64320
+}, {
+  pos: [0.824385, 0.609825],
+  time: 64620
+}, {
+  pos: [0.813845, 0.5827],
+  time: 64930
+}, {
+  pos: [0.793255, 0.570085],
+  time: 65220
+}, {
+  pos: [0.756715, 0.608245],
+  time: 65580
+}, {
+  pos: [0.763345, 0.586315],
+  time: 65920
+}, {
+  pos: [0.726095, 0.611815],
+  time: 66420
+}, {
+  pos: [0.6875, 0.6191],
+  time: 66730
+}, {
+  pos: [0.717065, 0.648125],
+  time: 67000
+}, {
+  pos: [0.740465, 0.65339],
+  time: 67390
+}, {
+  pos: [0.65317, 0.723305],
+  time: 68180
+}, {
+  pos: [0.70546, 0.694325],
+  time: 68810
+}, {
+  pos: [0.71706, 0.723615],
+  time: 69390
+}, {
+  pos: [0.67446, 0.736515],
+  time: 69990
+}, {
+  pos: [0.64236, 0.799515],
+  time: 70590
+}, {
+  pos: [0.643735, 0.743965],
+  time: 71140
+}, {
+  pos: [0.61099, 0.749275],
+  time: 71730
+}, {
+  pos: [0.59391, 0.711455],
+  time: 72340
+}, {
+  pos: [0.62771, 0.79108],
+  time: 72990
+}, {
+  pos: [0.61124, 0.72358],
+  time: 73530
+}, {
+  pos: [0.62264, 0.76138],
+  time: 74130
+}, {
+  pos: [0.671, 0.82028],
+  time: 74750
+}, {
+  pos: [0.67982, 0.8669],
+  time: 75380
+}, {
+  pos: [0.715845, 0.841875],
+  time: 75930
+}, {
+  pos: [0.657845, 0.870875],
+  time: 76510
+}, {
+  pos: [0.662885, 0.796535],
+  time: 77140
+}, {
+  pos: [0.595685, 0.840635],
+  time: 77740
+}, {
+  pos: [0.61851, 0.87611],
+  time: 78290
+}, {
+  pos: [0.63531, 0.82961],
+  time: 78890
+}, {
+  pos: [0.7125, 0.77133],
+  time: 79510
+}, {
+  pos: [0.662785, 0.695385],
+  time: 80120
+}, {
+  pos: [0.668945, 0.699865],
+  time: 80680
+}, {
+  pos: [0.631445, 0.683065],
+  time: 81280
+}, {
+  pos: [0.659505, 0.71631],
+  time: 81890
+}, {
+  pos: [0.733925, 0.65104],
+  time: 82500
+}, {
+  pos: [0.741485, 0.63508],
+  time: 83060
+}, {
+  pos: [0.688385, 0.56192],
+  time: 83650
+}, {
+  pos: [0.64721, 0.50641],
+  time: 84260
+}, {
+  pos: [0.60106, 0.57206],
+  time: 84910
+}, {
+  pos: [0.632065, 0.552715],
+  time: 85440
+}, {
+  pos: [0.66388, 0.48436],
+  time: 86070
+}, {
+  pos: [0.71666, 0.47189],
+  time: 86650
+}, {
+  pos: [0.657755, 0.528905],
+  time: 87280
+}, {
+  pos: [0.625555, 0.553265],
+  time: 87840
+}, {
+  pos: [0.583255, 0.598865],
+  time: 88440
+}, {
+  pos: [0.649405, 0.54878],
+  time: 89070
+}, {
+  pos: [0.70905, 0.63726],
+  time: 89860
+}];
+module.exports = Beatmap;
+
+/***/ }),
+
+/***/ "./src/assets/beatmaps/beatmap10.js":
+/*!******************************************!*\
+  !*** ./src/assets/beatmaps/beatmap10.js ***!
+  \******************************************/
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/***/ ((module) => {
+
+//10 beat saber
+var Beatmap = [{
+  pos: [0.5, 0.5],
+  time: 1240
+}, {
+  pos: [0.55198, 0.49096],
+  time: 2370
+}, {
+  pos: [0.570795, 0.44856],
+  time: 2900
+}, {
+  pos: [0.578915, 0.48944],
+  time: 3460
+}, {
+  pos: [0.546715, 0.4984],
+  time: 4020
+}, {
+  pos: [0.601875, 0.4284],
+  time: 4580
+}, {
+  pos: [0.59247, 0.394485],
+  time: 5150
+}, {
+  pos: [0.64262, 0.39006],
+  time: 5740
+}, {
+  pos: [0.64721, 0.37116],
+  time: 6280
+}, {
+  pos: [0.69795, 0.324845],
+  time: 6870
+}, {
+  pos: [0.73771, 0.300765],
+  time: 7430
+}, {
+  pos: [0.77663, 0.266045],
+  time: 7990
+}, {
+  pos: [0.756275, 0.266635],
+  time: 8580
+}, {
+  pos: [0.767405, 0.262395],
+  time: 9110
+}, {
+  pos: [0.717005, 0.243195],
+  time: 9710
+}, {
+  pos: [0.735485, 0.209595],
+  time: 10270
+}, {
+  pos: [0.700385, 0.278295],
+  time: 10870
+}, {
+  pos: [0.732865, 0.242735],
+  time: 11430
+}, {
+  pos: [0.66769, 0.21881],
+  time: 11980
+}, {
+  pos: [0.724975, 0.278375],
+  time: 12550
+}, {
+  pos: [0.658555, 0.330485],
+  time: 13090
+}, {
+  pos: [0.65708, 0.29951],
+  time: 13680
+}, {
+  pos: [0.6381, 0.30887],
+  time: 14200
+}, {
+  pos: [0.570545, 0.29412],
+  time: 14790
+}, {
+  pos: [0.603585, 0.34424],
+  time: 15350
+}, {
+  pos: [0.640785, 0.30859],
+  time: 15970
+}, {
+  pos: [0.619185, 0.29914],
+  time: 16510
+}, {
+  pos: [0.59856, 0.242765],
+  time: 17060
+}, {
+  pos: [0.64068, 0.277865],
+  time: 17580
+}, {
+  pos: [0.60378, 0.267365],
+  time: 18180
+}, {
+  pos: [0.66534, 0.200405],
+  time: 18720
+}, {
+  pos: [0.611165, 0.15668],
+  time: 19270
+}, {
+  pos: [0.57514, 0.138805],
+  time: 19820
+}, {
+  pos: [0.5872, 0.1],
+  time: 20490
+}, {
+  pos: [0.573685, 0.1],
+  time: 21020
+}, {
+  pos: [0.539485, 0.1423],
+  time: 21380
+}, {
+  pos: [0.517725, 0.13941],
+  time: 21720
+}, {
+  pos: [0.475865, 0.13504],
+  time: 22180
+}, {
+  pos: [0.415865, 0.13954],
+  time: 22780
+}, {
+  pos: [0.424185, 0.1333],
+  time: 23300
+}, {
+  pos: [0.36562, 0.160065],
+  time: 23830
+}, {
+  pos: [0.346095, 0.119915],
+  time: 24380
+}, {
+  pos: [0.397125, 0.1],
+  time: 25010
+}, {
+  pos: [0.459565, 0.1],
+  time: 25570
+}, {
+  pos: [0.479165, 0.16412],
+  time: 26130
+}, {
+  pos: [0.46734, 0.146795],
+  time: 26680
+}, {
+  pos: [0.52593, 0.119075],
+  time: 27310
+}, {
+  pos: [0.58236, 0.137705],
+  time: 27850
+}, {
+  pos: [0.595285, 0.15173],
+  time: 28400
+}, {
+  pos: [0.583405, 0.1],
+  time: 28940
+}, {
+  pos: [0.647885, 0.16417],
+  time: 29560
+}, {
+  pos: [0.643825, 0.2126],
+  time: 30140
+}, {
+  pos: [0.593665, 0.247655],
+  time: 30710
+}, {
+  pos: [0.576025, 0.308415],
+  time: 31270
+}, {
+  pos: [0.530105, 0.259975],
+  time: 31830
+}, {
+  pos: [0.54193, 0.263275],
+  time: 32380
+}, {
+  pos: [0.53213, 0.222115],
+  time: 32940
+}, {
+  pos: [0.509945, 0.211915],
+  time: 33450
+}, {
+  pos: [0.466285, 0.14731],
+  time: 34040
+}, {
+  pos: [0.475565, 0.19313],
+  time: 34620
+}, {
+  pos: [0.539075, 0.18733],
+  time: 35200
+}, {
+  pos: [0.471815, 0.12349],
+  time: 35770
+}, {
+  pos: [0.519975, 0.1],
+  time: 36330
+}, {
+  pos: [0.524295, 0.1],
+  time: 36870
+}, {
+  pos: [0.565095, 0.1555],
+  time: 37470
+}, {
+  pos: [0.519455, 0.14374],
+  time: 38030
+}, {
+  pos: [0.46253, 0.11184],
+  time: 38580
+}, {
+  pos: [0.43094, 0.1],
+  time: 39120
+}, {
+  pos: [0.48078, 0.12156],
+  time: 39680
+}, {
+  pos: [0.53316, 0.1],
+  time: 40220
+}, {
+  pos: [0.52185, 0.15974],
+  time: 40800
+}, {
+  pos: [0.47117, 0.16506],
+  time: 41360
+}, {
+  pos: [0.445805, 0.208095],
+  time: 41930
+}, {
+  pos: [0.38828, 0.22904],
+  time: 42520
+}, {
+  pos: [0.3894, 0.24108],
+  time: 43080
+}, {
+  pos: [0.328125, 0.278415],
+  time: 43650
+}, {
+  pos: [0.359205, 0.298575],
+  time: 44210
+}, {
+  pos: [0.393925, 0.315375],
+  time: 44770
+}, {
+  pos: [0.40903, 0.333045],
+  time: 45340
+}, {
+  pos: [0.41827, 0.311485],
+  time: 45900
+}, {
+  pos: [0.42367, 0.275305],
+  time: 46440
+}, {
+  pos: [0.468985, 0.25507],
+  time: 47010
+}, {
+  pos: [0.435355, 0.196955],
+  time: 47600
+}, {
+  pos: [0.4174, 0.17957],
+  time: 48170
+}, {
+  pos: [0.3833, 0.23457],
+  time: 48720
+}, {
+  pos: [0.42675, 0.29892],
+  time: 49270
+}, {
+  pos: [0.392925, 0.30827],
+  time: 49820
+}, {
+  pos: [0.336825, 0.37817],
+  time: 50420
+}, {
+  pos: [0.289845, 0.41703],
+  time: 51000
+}, {
+  pos: [0.335765, 0.37587],
+  time: 51560
+}, {
+  pos: [0.3809, 0.35699],
+  time: 52150
+}, {
+  pos: [0.341415, 0.35964],
+  time: 52680
+}, {
+  pos: [0.339965, 0.34021],
+  time: 53260
+}, {
+  pos: [0.374165, 0.36415],
+  time: 53830
+}, {
+  pos: [0.37033, 0.307215],
+  time: 54420
+}, {
+  pos: [0.397005, 0.248365],
+  time: 54970
+}, {
+  pos: [0.455865, 0.218125],
+  time: 55510
+}, {
+  pos: [0.403755, 0.218665],
+  time: 56050
+}, {
+  pos: [0.38088, 0.23544],
+  time: 56660
+}, {
+  pos: [0.37332, 0.26082],
+  time: 57200
+}, {
+  pos: [0.33794, 0.25589],
+  time: 57780
+}, {
+  pos: [0.360995, 0.237075],
+  time: 58310
+}, {
+  pos: [0.318245, 0.2955],
+  time: 58880
+}, {
+  pos: [0.345385, 0.282815],
+  time: 59470
+}, {
+  pos: [0.309635, 0.30674],
+  time: 60020
+}, {
+  pos: [0.25902, 0.31257],
+  time: 60550
+}, {
+  pos: [0.20412, 0.34197],
+  time: 61150
+}, {
+  pos: [0.16308, 0.287535],
+  time: 61720
+}, {
+  pos: [0.1, 0.34388],
+  time: 62310
+}, {
+  pos: [0.1, 0.386],
+  time: 62850
+}, {
+  pos: [0.1, 0.41568],
+  time: 63410
+}, {
+  pos: [0.1, 0.36493],
+  time: 63990
+}, {
+  pos: [0.1, 0.40524],
+  time: 64570
+}, {
+  pos: [0.1, 0.39012],
+  time: 65130
+}, {
+  pos: [0.1, 0.37062],
+  time: 65730
+}, {
+  pos: [0.1, 0.39741],
+  time: 66300
+}, {
+  pos: [0.10203, 0.35536],
+  time: 66880
+}, {
+  pos: [0.15853, 0.33861],
+  time: 67380
+}, {
+  pos: [0.11179, 0.26907],
+  time: 67950
+}, {
+  pos: [0.17905, 0.27021],
+  time: 68520
+}, {
+  pos: [0.14965, 0.33097],
+  time: 69080
+}, {
+  pos: [0.1, 0.33517],
+  time: 69640
+}, {
+  pos: [0.1, 0.39997],
+  time: 70240
+}, {
+  pos: [0.12212, 0.37561],
+  time: 70800
+}, {
+  pos: [0.1, 0.38849],
+  time: 71360
+}, {
+  pos: [0.1, 0.41453],
+  time: 71920
+}, {
+  pos: [0.1294, 0.37141],
+  time: 72480
+}, {
+  pos: [0.15961, 0.346045],
+  time: 73050
+}, {
+  pos: [0.16759, 0.38224],
+  time: 73620
+}, {
+  pos: [0.20107, 0.42679],
+  time: 74160
+}, {
+  pos: [0.26377, 0.421375],
+  time: 74730
+}, {
+  pos: [0.23506, 0.470095],
+  time: 75310
+}, {
+  pos: [0.304975, 0.44148],
+  time: 75900
+}, {
+  pos: [0.290665, 0.426905],
+  time: 76430
+}, {
+  pos: [0.238465, 0.385725],
+  time: 77010
+}, {
+  pos: [0.271225, 0.444245],
+  time: 77570
+}, {
+  pos: [0.304435, 0.402395],
+  time: 78110
+}, {
+  pos: [0.363145, 0.454265],
+  time: 78680
+}, {
+  pos: [0.383885, 0.509775],
+  time: 79290
+}, {
+  pos: [0.358235, 0.448755],
+  time: 79830
+}, {
+  pos: [0.365645, 0.51288],
+  time: 80400
+}, {
+  pos: [0.354165, 0.53528],
+  time: 80960
+}, {
+  pos: [0.29289, 0.537845],
+  time: 81530
+}, {
+  pos: [0.24189, 0.502745],
+  time: 82130
+}, {
+  pos: [0.29789, 0.515065],
+  time: 82690
+}, {
+  pos: [0.25739, 0.549625],
+  time: 83230
+}, {
+  pos: [0.20369, 0.582325],
+  time: 83830
+}, {
+  pos: [0.17765, 0.524645],
+  time: 84390
+}, {
+  pos: [0.179715, 0.591315],
+  time: 84980
+}, {
+  pos: [0.235065, 0.579975],
+  time: 85520
+}, {
+  pos: [0.304685, 0.519205],
+  time: 86110
+}, {
+  pos: [0.35, 0.52576],
+  time: 86680
+}, {
+  pos: [0.383, 0.58241],
+  time: 87230
+}, {
+  pos: [0.345635, 0.52623],
+  time: 87760
+}, {
+  pos: [0.289635, 0.51167],
+  time: 88320
+}, {
+  pos: [0.324435, 0.55575],
+  time: 88900
+}, {
+  pos: [0.327975, 0.600885],
+  time: 89490
+}, {
+  pos: [0.374175, 0.581285],
+  time: 90050
+}, {
+  pos: [0.438855, 0.519685],
+  time: 90610
+}, {
+  pos: [0.498305, 0.522585],
+  time: 91190
+}, {
+  pos: [0.426675, 0.587835],
+  time: 91770
+}, {
+  pos: [0.473945, 0.529255],
+  time: 92350
+}, {
+  pos: [0.512885, 0.586485],
+  time: 92940
+}, {
+  pos: [0.570085, 0.57081],
+  time: 93490
+}, {
+  pos: [0.586605, 0.531575],
+  time: 94080
+}, {
+  pos: [0.63308, 0.490325],
+  time: 94630
+}, {
+  pos: [0.619685, 0.497165],
+  time: 95200
+}, {
+  pos: [0.624365, 0.547345],
+  time: 95720
+}, {
+  pos: [0.577675, 0.505295],
+  time: 96300
+}, {
+  pos: [0.515305, 0.563075],
+  time: 96840
+}, {
+  pos: [0.576785, 0.527695],
+  time: 97420
+}, {
+  pos: [0.54516, 0.49552],
+  time: 97970
+}, {
+  pos: [0.46564, 0.66166],
+  time: 100810
+}, {
+  pos: [0.39514, 0.528885],
+  time: 103160
+}, {
+  pos: [0.474465, 0.51302],
+  time: 104830
+}, {
+  pos: [0.376995, 0.40985],
+  time: 105970
+}, {
+  pos: [0.372475, 0.27764],
+  time: 107100
+}, {
+  pos: [0.254955, 0.178765],
+  time: 108230
+}, {
+  pos: [0.151715, 0.239665],
+  time: 109390
+}, {
+  pos: [0.174815, 0.246265],
+  time: 109990
+}, {
+  pos: [0.18224, 0.27624],
+  time: 110540
+}, {
+  pos: [0.18386, 0.23223],
+  time: 111080
+}, {
+  pos: [0.15022, 0.18293],
+  time: 111660
+}, {
+  pos: [0.20202, 0.16725],
+  time: 112220
+}, {
+  pos: [0.265885, 0.155325],
+  time: 112750
+}, {
+  pos: [0.323185, 0.193425],
+  time: 113350
+}, {
+  pos: [0.306135, 0.216525],
+  time: 113900
+}, {
+  pos: [0.35088, 0.25956],
+  time: 114470
+}, {
+  pos: [0.407815, 0.30322],
+  time: 115060
+}, {
+  pos: [0.410765, 0.250415],
+  time: 115650
+}, {
+  pos: [0.351595, 0.19765],
+  time: 116260
+}, {
+  pos: [0.350815, 0.19505],
+  time: 116780
+}, {
+  pos: [0.334015, 0.20121],
+  time: 117340
+}, {
+  pos: [0.36069, 0.14016],
+  time: 117890
+}, {
+  pos: [0.41289, 0.1912],
+  time: 118470
+}, {
+  pos: [0.48075, 0.20367],
+  time: 119050
+}, {
+  pos: [0.41406, 0.20718],
+  time: 119590
+}, {
+  pos: [0.36725, 0.15479],
+  time: 120210
+}, {
+  pos: [0.31637, 0.138625],
+  time: 120740
+}, {
+  pos: [0.26289, 0.1],
+  time: 121300
+}, {
+  pos: [0.20064, 0.13125],
+  time: 121800
+}, {
+  pos: [0.12561, 0.107155],
+  time: 122410
+}, {
+  pos: [0.13205, 0.147475],
+  time: 122970
+}, {
+  pos: [0.1, 0.1],
+  time: 123540
+}, {
+  pos: [0.163425, 0.12655],
+  time: 124130
+}, {
+  pos: [0.12714, 0.148675],
+  time: 124720
+}, {
+  pos: [0.11548, 0.12297],
+  time: 125250
+}, {
+  pos: [0.18015, 0.16183],
+  time: 125830
+}, {
+  pos: [0.1147, 0.19813],
+  time: 126380
+}, {
+  pos: [0.11116, 0.169515],
+  time: 126970
+}, {
+  pos: [0.1, 0.239115],
+  time: 127570
+}, {
+  pos: [0.1, 0.21794],
+  time: 128120
+}, {
+  pos: [0.1, 0.284215],
+  time: 128670
+}, {
+  pos: [0.1, 0.22909],
+  time: 129300
+}, {
+  pos: [0.12862, 0.19782],
+  time: 129830
+}, {
+  pos: [0.11224, 0.24384],
+  time: 130350
+}, {
+  pos: [0.135955, 0.262965],
+  time: 130860
+}, {
+  pos: [0.101735, 0.322555],
+  time: 131450
+}, {
+  pos: [0.1, 0.278875],
+  time: 132010
+}, {
+  pos: [0.12784, 0.335135],
+  time: 132590
+}, {
+  pos: [0.1, 0.380735],
+  time: 133160
+}, {
+  pos: [0.1, 0.410315],
+  time: 133740
+}, {
+  pos: [0.1, 0.4233],
+  time: 134270
+}, {
+  pos: [0.1, 0.36634],
+  time: 134910
+}, {
+  pos: [0.109635, 0.371745],
+  time: 135380
+}, {
+  pos: [0.1, 0.359855],
+  time: 135960
+}, {
+  pos: [0.1118, 0.328585],
+  time: 136550
+}, {
+  pos: [0.1, 0.309775],
+  time: 137120
+}, {
+  pos: [0.13306, 0.23938],
+  time: 137690
+}, {
+  pos: [0.11949, 0.28481],
+  time: 138280
+}, {
+  pos: [0.1, 0.22237],
+  time: 138840
+}, {
+  pos: [0.1, 0.220375],
+  time: 139410
+}, {
+  pos: [0.1, 0.287065],
+  time: 139950
+}, {
+  pos: [0.1513, 0.309865],
+  time: 140550
+}, {
+  pos: [0.19063, 0.351475],
+  time: 141120
+}, {
+  pos: [0.15877, 0.353095],
+  time: 141660
+}, {
+  pos: [0.13147, 0.296995],
+  time: 142260
+}, {
+  pos: [0.196925, 0.3068],
+  time: 142790
+}, {
+  pos: [0.235565, 0.23848],
+  time: 143350
+}, {
+  pos: [0.198885, 0.24744],
+  time: 143910
+}, {
+  pos: [0.219885, 0.23484],
+  time: 144470
+}, {
+  pos: [0.260775, 0.22063],
+  time: 145050
+}, {
+  pos: [0.302025, 0.27948],
+  time: 145600
+}, {
+  pos: [0.308625, 0.30288],
+  time: 146200
+}, {
+  pos: [0.268025, 0.37288],
+  time: 146760
+}, {
+  pos: [0.332225, 0.35218],
+  time: 147360
+}, {
+  pos: [0.289325, 0.37363],
+  time: 147910
+}, {
+  pos: [0.328805, 0.32851],
+  time: 148380
+}, {
+  pos: [0.249505, 0.314535],
+  time: 149030
+}, {
+  pos: [0.304385, 0.341415],
+  time: 149590
+}, {
+  pos: [0.346665, 0.374455],
+  time: 150150
+}, {
+  pos: [0.280415, 0.3143],
+  time: 150680
+}, {
+  pos: [0.219365, 0.278275],
+  time: 151230
+}, {
+  pos: [0.276665, 0.241075],
+  time: 151830
+}, {
+  pos: [0.24559, 0.18745],
+  time: 152380
+}, {
+  pos: [0.27807, 0.17121],
+  time: 152940
+}, {
+  pos: [0.22107, 0.21861],
+  time: 153540
+}, {
+  pos: [0.21765, 0.16218],
+  time: 154110
+}, {
+  pos: [0.26055, 0.225705],
+  time: 154660
+}, {
+  pos: [0.28715, 0.262665],
+  time: 155220
+}, {
+  pos: [0.32743, 0.24226],
+  time: 155750
+}, {
+  pos: [0.35083, 0.22186],
+  time: 156350
+}, {
+  pos: [0.33011, 0.16782],
+  time: 156910
+}, {
+  pos: [0.35312, 0.21266],
+  time: 157500
+}, {
+  pos: [0.31084, 0.2667],
+  time: 158060
+}, {
+  pos: [0.28329, 0.21537],
+  time: 158640
+}, {
+  pos: [0.32669, 0.26633],
+  time: 159200
+}, {
+  pos: [0.37065, 0.24477],
+  time: 159760
+}, {
+  pos: [0.37645, 0.24709],
+  time: 160340
+}, {
+  pos: [0.36917, 0.30085],
+  time: 160900
+}, {
+  pos: [0.354595, 0.255535],
+  time: 161430
+}, {
+  pos: [0.398675, 0.230885],
+  time: 162010
+}, {
+  pos: [0.410825, 0.292445],
+  time: 162550
+}, {
+  pos: [0.342095, 0.355955],
+  time: 163130
+}, {
+  pos: [0.369355, 0.424685],
+  time: 163710
+}, {
+  pos: [0.410395, 0.484535],
+  time: 164280
+}, {
+  pos: [0.557735, 0.59782],
+  time: 165670
+}];
+module.exports = Beatmap;
+
+/***/ }),
+
+/***/ "./src/assets/beatmaps/beatmap2.js":
+/*!*****************************************!*\
+  !*** ./src/assets/beatmaps/beatmap2.js ***!
+  \*****************************************/
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/***/ ((module) => {
+
+var Beatmap = [{
+  pos: [0.5, 0.5],
+  time: 1320
+}, {
+  pos: [0.49901, 0.50693],
+  time: 1650
+}, {
+  pos: [0.50715, 0.524135],
+  time: 2020
+}, {
+  pos: [0.53564, 0.52913],
+  time: 2390
+}, {
+  pos: [0.506975, 0.516845],
+  time: 2780
+}, {
+  pos: [0.505175, 0.502045],
+  time: 3180
+}, {
+  pos: [0.540775, 0.497245],
+  time: 3580
+}, {
+  pos: [0.545335, 0.498955],
+  time: 3960
+}, {
+  pos: [0.496935, 0.535355],
+  time: 4360
+}, {
+  pos: [0.48689, 0.54171],
+  time: 4770
+}, {
+  pos: [0.51463, 0.55862],
+  time: 5150
+}, {
+  pos: [0.50903, 0.52822],
+  time: 5550
+}, {
+  pos: [0.48483, 0.52422],
+  time: 5950
+}, {
+  pos: [0.47499, 0.489165],
+  time: 6360
+}, {
+  pos: [0.51722, 0.495315],
+  time: 6770
+}, {
+  pos: [0.47295, 0.489425],
+  time: 7150
+}, {
+  pos: [0.454815, 0.52784],
+  time: 7540
+}, {
+  pos: [0.472675, 0.54076],
+  time: 7920
+}, {
+  pos: [0.505475, 0.55776],
+  time: 8320
+}, {
+  pos: [0.54932, 0.53704],
+  time: 8690
+}, {
+  pos: [0.52952, 0.51144],
+  time: 9090
+}, {
+  pos: [0.54912, 0.48164],
+  time: 9490
+}, {
+  pos: [0.5304, 0.491975],
+  time: 9880
+}, {
+  pos: [0.48423, 0.445805],
+  time: 10260
+}, {
+  pos: [0.46783, 0.47143],
+  time: 10670
+}, {
+  pos: [0.47723, 0.48823],
+  time: 11070
+}, {
+  pos: [0.49783, 0.53503],
+  time: 11470
+}, {
+  pos: [0.491785, 0.49018],
+  time: 11860
+}, {
+  pos: [0.492925, 0.48904],
+  time: 12240
+}, {
+  pos: [0.458125, 0.48004],
+  time: 12640
+}, {
+  pos: [0.494925, 0.47044],
+  time: 13040
+}, {
+  pos: [0.48855, 0.47962],
+  time: 13210
+}, {
+  pos: [0.49405, 0.50462],
+  time: 13460
+}, {
+  pos: [0.51185, 0.52612],
+  time: 13660
+}, {
+  pos: [0.51878, 0.532315],
+  time: 13870
+}, {
+  pos: [0.532555, 0.543905],
+  time: 14060
+}, {
+  pos: [0.5605, 0.531255],
+  time: 14290
+}, {
+  pos: [0.55153, 0.513775],
+  time: 14520
+}, {
+  pos: [0.55478, 0.497265],
+  time: 14780
+}, {
+  pos: [0.5616, 0.474825],
+  time: 15000
+}, {
+  pos: [0.55152, 0.47598],
+  time: 15210
+}, {
+  pos: [0.52967, 0.465055],
+  time: 15400
+}, {
+  pos: [0.537145, 0.4447],
+  time: 15630
+}, {
+  pos: [0.517975, 0.44938],
+  time: 15810
+}, {
+  pos: [0.528345, 0.46043],
+  time: 16150
+}, {
+  pos: [0.558745, 0.45623],
+  time: 16550
+}, {
+  pos: [0.580145, 0.41683],
+  time: 16950
+}, {
+  pos: [0.548225, 0.44371],
+  time: 17370
+}, {
+  pos: [0.576025, 0.44351],
+  time: 17770
+}, {
+  pos: [0.558025, 0.39471],
+  time: 18170
+}, {
+  pos: [0.553425, 0.35531],
+  time: 18570
+}, {
+  pos: [0.514425, 0.32951],
+  time: 18970
+}, {
+  pos: [0.511905, 0.29243],
+  time: 19330
+}, {
+  pos: [0.552505, 0.34223],
+  time: 19730
+}, {
+  pos: [0.547565, 0.327505],
+  time: 19920
+}, {
+  pos: [0.567725, 0.31711],
+  time: 20130
+}, {
+  pos: [0.578435, 0.325195],
+  time: 20340
+}, {
+  pos: [0.556595, 0.31816],
+  time: 20550
+}, {
+  pos: [0.566665, 0.308565],
+  time: 20740
+}, {
+  pos: [0.549665, 0.316765],
+  time: 20940
+}, {
+  pos: [0.55091, 0.317485],
+  time: 20970
+}, {
+  pos: [0.552405, 0.31691],
+  time: 21200
+}, {
+  pos: [0.558385, 0.34359],
+  time: 21430
+}, {
+  pos: [0.571085, 0.35739],
+  time: 21630
+}, {
+  pos: [0.595685, 0.37269],
+  time: 21830
+}, {
+  pos: [0.619435, 0.36072],
+  time: 22020
+}, {
+  pos: [0.625835, 0.34172],
+  time: 22220
+}, {
+  pos: [0.59127, 0.319555],
+  time: 22530
+}, {
+  pos: [0.54781, 0.357275],
+  time: 22940
+}, {
+  pos: [0.58201, 0.366875],
+  time: 23340
+}, {
+  pos: [0.62506, 0.3338],
+  time: 23690
+}, {
+  pos: [0.58986, 0.3228],
+  time: 24090
+}, {
+  pos: [0.63471, 0.30876],
+  time: 24480
+}, {
+  pos: [0.592785, 0.329235],
+  time: 24870
+}, {
+  pos: [0.568365, 0.37382],
+  time: 25240
+}, {
+  pos: [0.54672, 0.389615],
+  time: 25630
+}, {
+  pos: [0.537945, 0.37889],
+  time: 26020
+}, {
+  pos: [0.505905, 0.34703],
+  time: 26380
+}, {
+  pos: [0.505525, 0.34323],
+  time: 26760
+}, {
+  pos: [0.489535, 0.302865],
+  time: 27150
+}, {
+  pos: [0.464515, 0.293325],
+  time: 27510
+}, {
+  pos: [0.448235, 0.272975],
+  time: 27880
+}, {
+  pos: [0.478835, 0.309515],
+  time: 28240
+}, {
+  pos: [0.46811, 0.326285],
+  time: 28630
+}, {
+  pos: [0.42833, 0.309905],
+  time: 29020
+}, {
+  pos: [0.43499, 0.310985],
+  time: 29380
+}, {
+  pos: [0.41224, 0.27931],
+  time: 29730
+}, {
+  pos: [0.3788, 0.28919],
+  time: 30110
+}, {
+  pos: [0.38309, 0.304985],
+  time: 30500
+}, {
+  pos: [0.360705, 0.330885],
+  time: 30870
+}, {
+  pos: [0.372865, 0.321385],
+  time: 31250
+}, {
+  pos: [0.342065, 0.321385],
+  time: 31600
+}, {
+  pos: [0.36085, 0.317815],
+  time: 31770
+}, {
+  pos: [0.37125, 0.324515],
+  time: 31970
+}, {
+  pos: [0.373055, 0.30865],
+  time: 32160
+}, {
+  pos: [0.395055, 0.31485],
+  time: 32360
+}, {
+  pos: [0.412345, 0.325395],
+  time: 32550
+}, {
+  pos: [0.432235, 0.327825],
+  time: 32730
+}, {
+  pos: [0.45418, 0.312435],
+  time: 32920
+}, {
+  pos: [0.447815, 0.323075],
+  time: 33110
+}, {
+  pos: [0.448575, 0.323835],
+  time: 33300
+}, {
+  pos: [0.428075, 0.302735],
+  time: 33500
+}, {
+  pos: [0.389465, 0.30257],
+  time: 33830
+}, {
+  pos: [0.399725, 0.25901],
+  time: 34190
+}, {
+  pos: [0.37481, 0.274355],
+  time: 34520
+}, {
+  pos: [0.38881, 0.269955],
+  time: 34680
+}, {
+  pos: [0.36382, 0.254625],
+  time: 34890
+}, {
+  pos: [0.32998, 0.211065],
+  time: 35250
+}, {
+  pos: [0.32637, 0.206315],
+  time: 35440
+}, {
+  pos: [0.330075, 0.21895],
+  time: 35630
+}, {
+  pos: [0.321525, 0.23814],
+  time: 35820
+}, {
+  pos: [0.335625, 0.21944],
+  time: 36020
+}, {
+  pos: [0.331715, 0.20295],
+  time: 36190
+}, {
+  pos: [0.322515, 0.21625],
+  time: 36390
+}, {
+  pos: [0.3209, 0.231545],
+  time: 36580
+}, {
+  pos: [0.3202, 0.242945],
+  time: 36780
+}, {
+  pos: [0.3169, 0.247845],
+  time: 36980
+}, {
+  pos: [0.315475, 0.23065],
+  time: 37170
+}, {
+  pos: [0.333925, 0.24676],
+  time: 37350
+}, {
+  pos: [0.312725, 0.24216],
+  time: 37550
+}, {
+  pos: [0.313525, 0.25546],
+  time: 37750
+}, {
+  pos: [0.335125, 0.29402],
+  time: 38070
+}, {
+  pos: [0.33256, 0.270745],
+  time: 38260
+}, {
+  pos: [0.34054, 0.293545],
+  time: 38450
+}, {
+  pos: [0.34719, 0.28566],
+  time: 38640
+}, {
+  pos: [0.36771, 0.2925],
+  time: 38830
+}, {
+  pos: [0.39021, 0.28962],
+  time: 39010
+}, {
+  pos: [0.3942, 0.295035],
+  time: 39200
+}, {
+  pos: [0.37773, 0.280905],
+  time: 39380
+}, {
+  pos: [0.35988, 0.29952],
+  time: 39550
+}, {
+  pos: [0.35934, 0.30258],
+  time: 39730
+}, {
+  pos: [0.37134, 0.31498],
+  time: 39930
+}, {
+  pos: [0.37701, 0.31957],
+  time: 40200
+}, {
+  pos: [0.35505, 0.34054],
+  time: 40380
+}, {
+  pos: [0.335955, 0.33674],
+  time: 40570
+}, {
+  pos: [0.339375, 0.36788],
+  time: 40930
+}, {
+  pos: [0.31923, 0.36227],
+  time: 41100
+}, {
+  pos: [0.309255, 0.38355],
+  time: 41290
+}, {
+  pos: [0.32892, 0.36474],
+  time: 41480
+}, {
+  pos: [0.33072, 0.35007],
+  time: 41660
+}, {
+  pos: [0.325025, 0.351685],
+  time: 41830
+}, {
+  pos: [0.32702, 0.374865],
+  time: 42020
+}, {
+  pos: [0.34853, 0.380985],
+  time: 42200
+}, {
+  pos: [0.32612, 0.399975],
+  time: 42380
+}, {
+  pos: [0.32833, 0.4055],
+  time: 42550
+}, {
+  pos: [0.305815, 0.424215],
+  time: 42740
+}, {
+  pos: [0.319875, 0.41291],
+  time: 42930
+}, {
+  pos: [0.323745, 0.39086],
+  time: 43110
+}, {
+  pos: [0.335845, 0.37744],
+  time: 43330
+}, {
+  pos: [0.346945, 0.3434],
+  time: 43700
+}, {
+  pos: [0.35882, 0.35043],
+  time: 43890
+}, {
+  pos: [0.35179, 0.339315],
+  time: 44080
+}, {
+  pos: [0.35122, 0.33979],
+  time: 44270
+}, {
+  pos: [0.33469, 0.316135],
+  time: 44460
+}, {
+  pos: [0.35143, 0.325765],
+  time: 44640
+}, {
+  pos: [0.34283, 0.312165],
+  time: 44840
+}, {
+  pos: [0.35613, 0.313565],
+  time: 45040
+}, {
+  pos: [0.344485, 0.297755],
+  time: 45210
+}, {
+  pos: [0.36055, 0.2819],
+  time: 45420
+}, {
+  pos: [0.40162, 0.260255],
+  time: 45790
+}, {
+  pos: [0.35698, 0.248915],
+  time: 46150
+}, {
+  pos: [0.3253, 0.206255],
+  time: 46510
+}, {
+  pos: [0.32425, 0.248955],
+  time: 46860
+}, {
+  pos: [0.2945, 0.285845],
+  time: 47200
+}, {
+  pos: [0.31898, 0.325115],
+  time: 47540
+}, {
+  pos: [0.33564, 0.295535],
+  time: 47880
+}, {
+  pos: [0.29574, 0.32896],
+  time: 48230
+}, {
+  pos: [0.31752, 0.3592],
+  time: 48590
+}, {
+  pos: [0.29865, 0.34662],
+  time: 48930
+}, {
+  pos: [0.29406, 0.3796],
+  time: 49270
+}, {
+  pos: [0.33466, 0.38975],
+  time: 49620
+}, {
+  pos: [0.356885, 0.368575],
+  time: 49970
+}, {
+  pos: [0.381305, 0.369565],
+  time: 50300
+}, {
+  pos: [0.373485, 0.377725],
+  time: 50640
+}, {
+  pos: [0.35979, 0.387625],
+  time: 50970
+}, {
+  pos: [0.40093, 0.373005],
+  time: 51310
+}, {
+  pos: [0.42451, 0.359145],
+  time: 51670
+}, {
+  pos: [0.44901, 0.36737],
+  time: 52020
+}, {
+  pos: [0.47861, 0.35345],
+  time: 52340
+}, {
+  pos: [0.47351, 0.39051],
+  time: 52680
+}, {
+  pos: [0.440785, 0.417285],
+  time: 53030
+}, {
+  pos: [0.412905, 0.452475],
+  time: 53370
+}, {
+  pos: [0.418155, 0.485375],
+  time: 53720
+}, {
+  pos: [0.401985, 0.454025],
+  time: 54050
+}, {
+  pos: [0.405085, 0.45511],
+  time: 54360
+}, {
+  pos: [0.42066, 0.482235],
+  time: 54710
+}, {
+  pos: [0.38808, 0.472335],
+  time: 55070
+}, {
+  pos: [0.36536, 0.446095],
+  time: 55390
+}, {
+  pos: [0.390735, 0.41512],
+  time: 55740
+}, {
+  pos: [0.355375, 0.41512],
+  time: 56080
+}, {
+  pos: [0.36745, 0.409695],
+  time: 56430
+}, {
+  pos: [0.39752, 0.42194],
+  time: 56740
+}, {
+  pos: [0.35412, 0.41109],
+  time: 57090
+}, {
+  pos: [0.39052, 0.392365],
+  time: 57440
+}, {
+  pos: [0.41032, 0.362305],
+  time: 57800
+}, {
+  pos: [0.448645, 0.31943],
+  time: 58150
+}, {
+  pos: [0.424845, 0.33983],
+  time: 58490
+}, {
+  pos: [0.462445, 0.34559],
+  time: 58810
+}, {
+  pos: [0.496855, 0.31428],
+  time: 59120
+}, {
+  pos: [0.47183, 0.278055],
+  time: 59470
+}, {
+  pos: [0.43052, 0.251535],
+  time: 59810
+}, {
+  pos: [0.40643, 0.24642],
+  time: 60140
+}, {
+  pos: [0.407305, 0.25132],
+  time: 60490
+}, {
+  pos: [0.446245, 0.237295],
+  time: 60820
+}, {
+  pos: [0.41044, 0.25],
+  time: 61150
+}, {
+  pos: [0.43543, 0.21498],
+  time: 61490
+}, {
+  pos: [0.47776, 0.21906],
+  time: 61830
+}, {
+  pos: [0.482485, 0.25511],
+  time: 62180
+}, {
+  pos: [0.470585, 0.276285],
+  time: 62530
+}, {
+  pos: [0.50506, 0.23411],
+  time: 62880
+}, {
+  pos: [0.49546, 0.26419],
+  time: 63200
+}, {
+  pos: [0.53542, 0.26815],
+  time: 63560
+}, {
+  pos: [0.55885, 0.233995],
+  time: 63890
+}, {
+  pos: [0.59982, 0.228555],
+  time: 64230
+}, {
+  pos: [0.597195, 0.196355],
+  time: 64580
+}, {
+  pos: [0.627555, 0.175895],
+  time: 64910
+}, {
+  pos: [0.64549, 0.17904],
+  time: 65080
+}, {
+  pos: [0.64269, 0.16744],
+  time: 65240
+}, {
+  pos: [0.62369, 0.17162],
+  time: 65430
+}, {
+  pos: [0.63542, 0.170685],
+  time: 65600
+}, {
+  pos: [0.625815, 0.187855],
+  time: 65770
+}, {
+  pos: [0.614935, 0.178095],
+  time: 65930
+}, {
+  pos: [0.596065, 0.198835],
+  time: 66100
+}, {
+  pos: [0.581825, 0.209875],
+  time: 66260
+}, {
+  pos: [0.595895, 0.19801],
+  time: 66470
+}, {
+  pos: [0.56315, 0.155645],
+  time: 66840
+}, {
+  pos: [0.60275, 0.163925],
+  time: 67200
+}, {
+  pos: [0.562325, 0.156995],
+  time: 67530
+}, {
+  pos: [0.570085, 0.151875],
+  time: 67690
+}, {
+  pos: [0.552385, 0.145075],
+  time: 67890
+}, {
+  pos: [0.514465, 0.126995],
+  time: 68210
+}, {
+  pos: [0.534535, 0.112685],
+  time: 68390
+}, {
+  pos: [0.520945, 0.1],
+  time: 68570
+}, {
+  pos: [0.539665, 0.1],
+  time: 68750
+}, {
+  pos: [0.543085, 0.1],
+  time: 68930
+}, {
+  pos: [0.535385, 0.1135],
+  time: 69130
+}, {
+  pos: [0.527015, 0.12322],
+  time: 69310
+}, {
+  pos: [0.536465, 0.12277],
+  time: 69490
+}, {
+  pos: [0.5255, 0.13399],
+  time: 69660
+}, {
+  pos: [0.53434, 0.140705],
+  time: 69830
+}, {
+  pos: [0.539565, 0.119045],
+  time: 70020
+}, {
+  pos: [0.521565, 0.106045],
+  time: 70220
+}, {
+  pos: [0.51831, 0.119695],
+  time: 70430
+}, {
+  pos: [0.478585, 0.1],
+  time: 70780
+}, {
+  pos: [0.480285, 0.120655],
+  time: 70950
+}, {
+  pos: [0.456725, 0.105835],
+  time: 71140
+}, {
+  pos: [0.47715, 0.1],
+  time: 71330
+}, {
+  pos: [0.48282, 0.12214],
+  time: 71510
+}, {
+  pos: [0.492765, 0.10718],
+  time: 71680
+}, {
+  pos: [0.485625, 0.1],
+  time: 71850
+}, {
+  pos: [0.507675, 0.10369],
+  time: 72030
+}, {
+  pos: [0.502875, 0.1],
+  time: 72190
+}, {
+  pos: [0.520069999999999, 0.1],
+  time: 72380
+}, {
+  pos: [0.544674999999999, 0.1],
+  time: 72750
+}, {
+  pos: [0.543874999999999, 0.10464],
+  time: 72910
+}, {
+  pos: [0.530359999999999, 0.113225],
+  time: 73080
+}, {
+  pos: [0.55116, 0.109065],
+  time: 73400
+}, {
+  pos: [0.54036, 0.106105],
+  time: 73560
+}, {
+  pos: [0.55404, 0.113395],
+  time: 73740
+}, {
+  pos: [0.53804, 0.125635],
+  time: 73900
+}, {
+  pos: [0.53345, 0.13728],
+  time: 74070
+}, {
+  pos: [0.52954, 0.128185],
+  time: 74240
+}, {
+  pos: [0.54618, 0.114585],
+  time: 74400
+}, {
+  pos: [0.56709, 0.112715],
+  time: 74570
+}, {
+  pos: [0.58545, 0.119175],
+  time: 74740
+}, {
+  pos: [0.565305, 0.108805],
+  time: 74910
+}, {
+  pos: [0.57372, 0.1],
+  time: 75080
+}, {
+  pos: [0.579925, 0.1],
+  time: 75250
+}, {
+  pos: [0.592885, 0.1],
+  time: 75410
+}, {
+  pos: [0.594535, 0.1264],
+  time: 75630
+}, {
+  pos: [0.590505, 0.15709],
+  time: 75940
+}, {
+  pos: [0.60487, 0.165165],
+  time: 76110
+}, {
+  pos: [0.612605, 0.150715],
+  time: 76280
+}, {
+  pos: [0.633215, 0.145585],
+  time: 76460
+}, {
+  pos: [0.64962, 0.13462],
+  time: 76630
+}, {
+  pos: [0.65892, 0.12262],
+  time: 76830
+}, {
+  pos: [0.659585, 0.14409],
+  time: 77020
+}, {
+  pos: [0.637715, 0.12348],
+  time: 77200
+}, {
+  pos: [0.633845, 0.1242],
+  time: 77380
+}, {
+  pos: [0.63204, 0.11413],
+  time: 77570
+}, {
+  pos: [0.66234, 0.1],
+  time: 77870
+}, {
+  pos: [0.63722, 0.1],
+  time: 78190
+}, {
+  pos: [0.66692, 0.1],
+  time: 78520
+}, {
+  pos: [0.653389999999999, 0.13663],
+  time: 78850
+}, {
+  pos: [0.635435, 0.118405],
+  time: 79120
+}, {
+  pos: [0.646955, 0.100165],
+  time: 79440
+}, {
+  pos: [0.633455, 0.1],
+  time: 79740
+}, {
+  pos: [0.65408, 0.120295],
+  time: 80070
+}, {
+  pos: [0.61613, 0.1396],
+  time: 80400
+}, {
+  pos: [0.59964, 0.1464],
+  time: 80740
+}, {
+  pos: [0.602105, 0.12958],
+  time: 81030
+}, {
+  pos: [0.618755, 0.13873],
+  time: 81330
+}, {
+  pos: [0.634925, 0.145165],
+  time: 81660
+}, {
+  pos: [0.641525, 0.140065],
+  time: 81960
+}, {
+  pos: [0.656675, 0.145465],
+  time: 82260
+}, {
+  pos: [0.64727, 0.161305],
+  time: 82590
+}, {
+  pos: [0.61889, 0.193315],
+  time: 82920
+}, {
+  pos: [0.61376, 0.18967],
+  time: 83190
+}, {
+  pos: [0.5864, 0.16199],
+  time: 83510
+}, {
+  pos: [0.59105, 0.164315],
+  time: 83820
+}, {
+  pos: [0.59292, 0.183695],
+  time: 84160
+}, {
+  pos: [0.59238, 0.169385],
+  time: 84430
+}, {
+  pos: [0.57678, 0.186785],
+  time: 84580
+}, {
+  pos: [0.5231, 0.198445],
+  time: 85020
+}, {
+  pos: [0.52186, 0.23549],
+  time: 85330
+}, {
+  pos: [0.544645, 0.22709],
+  time: 85540
+}, {
+  pos: [0.562795, 0.209915],
+  time: 85690
+}, {
+  pos: [0.568875, 0.203355],
+  time: 86010
+}, {
+  pos: [0.545355, 0.219195],
+  time: 86250
+}, {
+  pos: [0.525405, 0.193695],
+  time: 86550
+}, {
+  pos: [0.558255, 0.222195],
+  time: 86850
+}, {
+  pos: [0.529755, 0.212745],
+  time: 87150
+}, {
+  pos: [0.512925, 0.19509],
+  time: 87480
+}, {
+  pos: [0.505275, 0.22854],
+  time: 87780
+}, {
+  pos: [0.472275, 0.21999],
+  time: 88080
+}, {
+  pos: [0.50874, 0.237315],
+  time: 88410
+}, {
+  pos: [0.50094, 0.203715],
+  time: 88710
+}, {
+  pos: [0.50526, 0.204195],
+  time: 88950
+}, {
+  pos: [0.50712, 0.19195],
+  time: 89260
+}, {
+  pos: [0.517705, 0.21486],
+  time: 89550
+}, {
+  pos: [0.54295, 0.212055],
+  time: 89880
+}, {
+  pos: [0.55687, 0.187415],
+  time: 90200
+}, {
+  pos: [0.58312, 0.182915],
+  time: 90500
+}, {
+  pos: [0.578, 0.191235],
+  time: 90820
+}, {
+  pos: [0.5465, 0.224385],
+  time: 91120
+}, {
+  pos: [0.5378, 0.24193],
+  time: 91410
+}, {
+  pos: [0.51946, 0.22485],
+  time: 91690
+}, {
+  pos: [0.504815, 0.193095],
+  time: 91980
+}, {
+  pos: [0.480035, 0.191835],
+  time: 92260
+}, {
+  pos: [0.428285, 0.207585],
+  time: 92710
+}, {
+  pos: [0.451685, 0.208185],
+  time: 92950
+}, {
+  pos: [0.427084999999999, 0.179265],
+  time: 93190
+}, {
+  pos: [0.43023, 0.17765],
+  time: 93360
+}, {
+  pos: [0.401559999999999, 0.1941],
+  time: 93830
+}, {
+  pos: [0.408359999999999, 0.2021],
+  time: 93990
+}, {
+  pos: [0.378689999999999, 0.21843],
+  time: 94450
+}, {
+  pos: [0.368209999999999, 0.21731],
+  time: 94610
+}, {
+  pos: [0.407689999999999, 0.21227],
+  time: 95030
+}, {
+  pos: [0.420665, 0.204845],
+  time: 95180
+}, {
+  pos: [0.405465, 0.219725],
+  time: 95340
+}, {
+  pos: [0.390525, 0.208925],
+  time: 95520
+}, {
+  pos: [0.367845, 0.19181],
+  time: 95730
+}, {
+  pos: [0.392345, 0.149285],
+  time: 96080
+}, {
+  pos: [0.408505, 0.172965],
+  time: 96400
+}, {
+  pos: [0.25988, 0.1],
+  time: 97850
+}];
+module.exports = Beatmap;
+
+/***/ }),
+
+/***/ "./src/assets/beatmaps/beatmap3.js":
+/*!*****************************************!*\
+  !*** ./src/assets/beatmaps/beatmap3.js ***!
+  \*****************************************/
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/***/ ((module) => {
+
+//3 dormir
+var Beatmap = [{
+  pos: [0.5, 0.5],
+  time: 1290
+}, {
+  pos: [0.49269, 0.58299],
+  time: 2150
+}, {
+  pos: [0.46549, 0.57279],
+  time: 3000
+}, {
+  pos: [0.56933, 0.50899],
+  time: 3880
+}, {
+  pos: [0.655215, 0.422215],
+  time: 4770
+}, {
+  pos: [0.61108, 0.410385],
+  time: 5680
+}, {
+  pos: [0.58883, 0.470015],
+  time: 6570
+}, {
+  pos: [0.540325, 0.558125],
+  time: 7460
+}, {
+  pos: [0.550335, 0.58588],
+  time: 8370
+}, {
+  pos: [0.49981, 0.64134],
+  time: 8840
+}, {
+  pos: [0.51235, 0.61472],
+  time: 9280
+}, {
+  pos: [0.52175, 0.598035],
+  time: 9750
+}, {
+  pos: [0.56069, 0.618715],
+  time: 10190
+}, {
+  pos: [0.521315, 0.56629],
+  time: 10640
+}, {
+  pos: [0.472035, 0.60215],
+  time: 11080
+}, {
+  pos: [0.433755, 0.60391],
+  time: 11520
+}, {
+  pos: [0.4301, 0.642395],
+  time: 11950
+}, {
+  pos: [0.423125, 0.643745],
+  time: 12400
+}, {
+  pos: [0.409265, 0.654745],
+  time: 12840
+}, {
+  pos: [0.398045, 0.707985],
+  time: 13280
+}, {
+  pos: [0.383195, 0.68211],
+  time: 13730
+}, {
+  pos: [0.420545, 0.721935],
+  time: 14180
+}, {
+  pos: [0.47432, 0.66636],
+  time: 14630
+}, {
+  pos: [0.43338, 0.67694],
+  time: 15090
+}, {
+  pos: [0.44013, 0.66119],
+  time: 15390
+}, {
+  pos: [0.45677, 0.67207],
+  time: 15550
+}, {
+  pos: [0.41189, 0.62311],
+  time: 16230
+}, {
+  pos: [0.40949, 0.61091],
+  time: 16430
+}, {
+  pos: [0.45709, 0.67706],
+  time: 17130
+}, {
+  pos: [0.446545, 0.693115],
+  time: 17320
+}, {
+  pos: [0.461035, 0.61204],
+  time: 18010
+}, {
+  pos: [0.463935, 0.61154],
+  time: 18210
+}, {
+  pos: [0.379205, 0.67407],
+  time: 18950
+}, {
+  pos: [0.380155, 0.66191],
+  time: 19140
+}, {
+  pos: [0.353925, 0.65847],
+  time: 19570
+}, {
+  pos: [0.396385, 0.70005],
+  time: 20010
+}, {
+  pos: [0.35071, 0.70095],
+  time: 20460
+}, {
+  pos: [0.316585, 0.67404],
+  time: 20850
+}, {
+  pos: [0.309885, 0.67994],
+  time: 21050
+}, {
+  pos: [0.32951, 0.697065],
+  time: 21300
+}, {
+  pos: [0.34436, 0.64554],
+  time: 21750
+}, {
+  pos: [0.31937, 0.68621],
+  time: 22240
+}, {
+  pos: [0.29775, 0.65516],
+  time: 22700
+}, {
+  pos: [0.30304, 0.6823],
+  time: 23160
+}, {
+  pos: [0.2744, 0.64838],
+  time: 23480
+}, {
+  pos: [0.28535, 0.643355],
+  time: 23630
+}, {
+  pos: [0.3121, 0.643355],
+  time: 24130
+}, {
+  pos: [0.301475, 0.65023],
+  time: 24380
+}, {
+  pos: [0.377775, 0.64393],
+  time: 25080
+}, {
+  pos: [0.376095, 0.64249],
+  time: 25320
+}, {
+  pos: [0.384555, 0.595725],
+  time: 25790
+}, {
+  pos: [0.38009, 0.6157],
+  time: 26260
+}, {
+  pos: [0.42455, 0.62272],
+  time: 26650
+}, {
+  pos: [0.433685, 0.651575],
+  time: 26940
+}, {
+  pos: [0.378065, 0.678845],
+  time: 27480
+}, {
+  pos: [0.39727, 0.65228],
+  time: 27710
+}, {
+  pos: [0.420165, 0.633945],
+  time: 27900
+}, {
+  pos: [0.439255, 0.64832],
+  time: 28130
+}, {
+  pos: [0.44038, 0.63057],
+  time: 28380
+}, {
+  pos: [0.4291, 0.61593],
+  time: 28620
+}, {
+  pos: [0.48398, 0.67837],
+  time: 29180
+}, {
+  pos: [0.47201, 0.653575],
+  time: 29750
+}, {
+  pos: [0.44257, 0.602515],
+  time: 30210
+}, {
+  pos: [0.44212, 0.558415],
+  time: 30660
+}, {
+  pos: [0.41212, 0.550735],
+  time: 31140
+}, {
+  pos: [0.381245, 0.547735],
+  time: 31390
+}, {
+  pos: [0.398155, 0.564455],
+  time: 31580
+}, {
+  pos: [0.477685, 0.615275],
+  time: 32240
+}, {
+  pos: [0.498385, 0.625475],
+  time: 32440
+}, {
+  pos: [0.597715, 0.554955],
+  time: 33300
+}, {
+  pos: [0.620755, 0.604395],
+  time: 33780
+}, {
+  pos: [0.650455, 0.635445],
+  time: 34230
+}, {
+  pos: [0.67387, 0.624525],
+  time: 34440
+}, {
+  pos: [0.704745, 0.56895],
+  time: 35090
+}, {
+  pos: [0.729145, 0.54935],
+  time: 35290
+}, {
+  pos: [0.731545, 0.56579],
+  time: 35530
+}, {
+  pos: [0.721105, 0.54863],
+  time: 35770
+}, {
+  pos: [0.755865, 0.47867],
+  time: 36650
+}, {
+  pos: [0.739425, 0.45431],
+  time: 36890
+}, {
+  pos: [0.702025, 0.40399],
+  time: 37570
+}, {
+  pos: [0.68953, 0.39013],
+  time: 37780
+}, {
+  pos: [0.61501, 0.35701],
+  time: 38470
+}, {
+  pos: [0.59149, 0.38326],
+  time: 38680
+}, {
+  pos: [0.530239999999999, 0.33496],
+  time: 39380
+}, {
+  pos: [0.523589999999999, 0.350825],
+  time: 39570
+}, {
+  pos: [0.450104999999999, 0.27182],
+  time: 40260
+}, {
+  pos: [0.470014999999999, 0.2925],
+  time: 40480
+}, {
+  pos: [0.427614999999999, 0.2487],
+  time: 40880
+}, {
+  pos: [0.458974999999999, 0.267565],
+  time: 41370
+}, {
+  pos: [0.456394999999999, 0.21704],
+  time: 41800
+}, {
+  pos: [0.507919999999999, 0.21119],
+  time: 42250
+}, {
+  pos: [0.516919999999999, 0.20759],
+  time: 42700
+}, {
+  pos: [0.532789999999999, 0.23956],
+  time: 43160
+}, {
+  pos: [0.530269999999999, 0.28177],
+  time: 43580
+}, {
+  pos: [0.548089999999999, 0.32863],
+  time: 44020
+}, {
+  pos: [0.566719999999999, 0.26101],
+  time: 45400
+}, {
+  pos: [0.481159999999999, 0.320995],
+  time: 46330
+}, {
+  pos: [0.541144999999999, 0.209395],
+  time: 47260
+}, {
+  pos: [0.539734999999999, 0.263445],
+  time: 48200
+}, {
+  pos: [0.622864999999999, 0.343515],
+  time: 49220
+}, {
+  pos: [0.641864999999999, 0.458515],
+  time: 50220
+}, {
+  pos: [0.625589999999999, 0.34366],
+  time: 51150
+}, {
+  pos: [0.604689999999999, 0.385935],
+  time: 52100
+}, {
+  pos: [0.595989999999999, 0.29763],
+  time: 52970
+}, {
+  pos: [0.657629999999999, 0.25945],
+  time: 53890
+}, {
+  pos: [0.575729999999999, 0.1546],
+  time: 54790
+}, {
+  pos: [0.615779999999999, 0.114105],
+  time: 55680
+}, {
+  pos: [0.626129999999999, 0.169305],
+  time: 56140
+}, {
+  pos: [0.676009999999999, 0.1893],
+  time: 56570
+}, {
+  pos: [0.690009999999999, 0.22105],
+  time: 57070
+}, {
+  pos: [0.674139999999999, 0.27671],
+  time: 57530
+}, {
+  pos: [0.725179999999999, 0.27165],
+  time: 57970
+}, {
+  pos: [0.759794999999999, 0.227575],
+  time: 58400
+}, {
+  pos: [0.745449999999999, 0.23527],
+  time: 58590
+}, {
+  pos: [0.751244999999999, 0.25484],
+  time: 58780
+}, {
+  pos: [0.754189999999999, 0.25028],
+  time: 58970
+}, {
+  pos: [0.765389999999999, 0.26858],
+  time: 59170
+}, {
+  pos: [0.770914999999999, 0.288215],
+  time: 59340
+}, {
+  pos: [0.771199999999999, 0.28071],
+  time: 59530
+}, {
+  pos: [0.775189999999999, 0.280995],
+  time: 59720
+}, {
+  pos: [0.795424999999999, 0.29838],
+  time: 59910
+}, {
+  pos: [0.810824999999999, 0.29168],
+  time: 60110
+}, {
+  pos: [0.802464999999999, 0.27958],
+  time: 60550
+}, {
+  pos: [0.796414999999999, 0.27947],
+  time: 60770
+}, {
+  pos: [0.805894999999999, 0.28787],
+  time: 61010
+}, {
+  pos: [0.798244999999999, 0.284],
+  time: 61190
+}, {
+  pos: [0.812734999999999, 0.289985],
+  time: 61400
+}, {
+  pos: [0.805039999999999, 0.289415],
+  time: 61590
+}, {
+  pos: [0.796324999999999, 0.30716],
+  time: 61800
+}, {
+  pos: [0.786719999999999, 0.30104],
+  time: 61970
+}, {
+  pos: [0.777359999999999, 0.2831],
+  time: 62360
+}, {
+  pos: [0.792359999999999, 0.2852],
+  time: 62560
+}, {
+  pos: [0.809359999999999, 0.2967],
+  time: 62760
+}, {
+  pos: [0.822064999999999, 0.295755],
+  time: 62970
+}, {
+  pos: [0.811424999999999, 0.301455],
+  time: 63160
+}, {
+  pos: [0.792074999999999, 0.283365],
+  time: 63340
+}, {
+  pos: [0.768434999999999, 0.299925],
+  time: 63580
+}, {
+  pos: [0.747224999999999, 0.29142],
+  time: 63790
+}, {
+  pos: [0.753944999999999, 0.285435],
+  time: 64000
+}, {
+  pos: [0.770639999999999, 0.286695],
+  time: 64210
+}, {
+  pos: [0.749579999999999, 0.251985],
+  time: 64600
+}, {
+  pos: [0.792779999999999, 0.278085],
+  time: 65050
+}, {
+  pos: [0.762029999999999, 0.239135],
+  time: 65460
+}, {
+  pos: [0.746449999999999, 0.23353],
+  time: 65650
+}, {
+  pos: [0.754749999999999, 0.22253],
+  time: 65850
+}, {
+  pos: [0.733779999999999, 0.21443],
+  time: 66030
+}, {
+  pos: [0.750894999999999, 0.208865],
+  time: 66240
+}, {
+  pos: [0.733374999999999, 0.222625],
+  time: 66400
+}, {
+  pos: [0.732639999999999, 0.2368],
+  time: 66610
+}, {
+  pos: [0.711074999999999, 0.229295],
+  time: 66800
+}, {
+  pos: [0.716114999999999, 0.21386],
+  time: 67010
+}, {
+  pos: [0.726299999999999, 0.194225],
+  time: 67220
+}, {
+  pos: [0.723149999999999, 0.200315],
+  time: 67640
+}, {
+  pos: [0.729049999999999, 0.186615],
+  time: 67840
+}, {
+  pos: [0.702759999999999, 0.191785],
+  time: 68060
+}, {
+  pos: [0.711559999999999, 0.183095],
+  time: 68280
+}, {
+  pos: [0.735359999999999, 0.182495],
+  time: 68480
+}, {
+  pos: [0.733984999999999, 0.205245],
+  time: 68730
+}, {
+  pos: [0.757584999999999, 0.183245],
+  time: 68930
+}, {
+  pos: [0.817834999999999, 0.215745],
+  time: 69430
+}, {
+  pos: [0.834484999999999, 0.25782],
+  time: 69880
+}, {
+  pos: [0.843064999999999, 0.23978],
+  time: 70320
+}, {
+  pos: [0.811604999999999, 0.201940000000001],
+  time: 70760
+}, {
+  pos: [0.836069999999999, 0.188500000000001],
+  time: 70970
+}, {
+  pos: [0.816819999999999, 0.165375],
+  time: 71220
+}, {
+  pos: [0.788089999999999, 0.181885],
+  time: 71480
+}, {
+  pos: [0.734889999999999, 0.167885],
+  time: 72040
+}, {
+  pos: [0.733244999999999, 0.1982],
+  time: 72510
+}, {
+  pos: [0.701564999999999, 0.18236],
+  time: 72990
+}, {
+  pos: [0.733524999999999, 0.237585],
+  time: 73460
+}, {
+  pos: [0.704264999999999, 0.205465],
+  time: 73900
+}, {
+  pos: [0.682924999999999, 0.178845],
+  time: 74340
+}, {
+  pos: [0.669649999999999, 0.16827],
+  time: 74790
+}, {
+  pos: [0.652049999999999, 0.13285],
+  time: 75230
+}, {
+  pos: [0.605409999999999, 0.15485],
+  time: 75670
+}, {
+  pos: [0.558109999999999, 0.118945],
+  time: 76100
+}, {
+  pos: [0.547989999999999, 0.1],
+  time: 76560
+}, {
+  pos: [0.580389999999999, 0.127225],
+  time: 77010
+}, {
+  pos: [0.555089999999999, 0.1],
+  time: 77450
+}, {
+  pos: [0.592499999999999, 0.1],
+  time: 77880
+}, {
+  pos: [0.601074999999999, 0.1],
+  time: 78370
+}, {
+  pos: [0.611884999999999, 0.1345],
+  time: 78830
+}, {
+  pos: [0.571679999999999, 0.142885],
+  time: 79260
+}, {
+  pos: [0.599804999999999, 0.153235],
+  time: 79710
+}, {
+  pos: [0.585179999999999, 0.10531],
+  time: 80160
+}, {
+  pos: [0.541079999999999, 0.129385],
+  time: 80610
+}, {
+  pos: [0.488719999999999, 0.108705],
+  time: 81050
+}, {
+  pos: [0.537779999999999, 0.1],
+  time: 81490
+}, {
+  pos: [0.505579999999999, 0.14393],
+  time: 81950
+}, {
+  pos: [0.530189999999999, 0.1],
+  time: 82410
+}, {
+  pos: [0.559399999999999, 0.11081],
+  time: 82870
+}, {
+  pos: [0.505059999999999, 0.14491],
+  time: 83310
+}, {
+  pos: [0.523539999999999, 0.1195],
+  time: 83730
+}, {
+  pos: [0.559619999999999, 0.13182],
+  time: 84170
+}, {
+  pos: [0.570419999999999, 0.1],
+  time: 84620
+}, {
+  pos: [0.530599999999999, 0.11364],
+  time: 85060
+}, {
+  pos: [0.534439999999999, 0.1],
+  time: 85540
+}, {
+  pos: [0.533989999999999, 0.1],
+  time: 85990
+}, {
+  pos: [0.546244999999999, 0.1],
+  time: 86420
+}, {
+  pos: [0.545599999999999, 0.1],
+  time: 86850
+}, {
+  pos: [0.565399999999999, 0.127],
+  time: 87300
+}, {
+  pos: [0.556544999999999, 0.143445],
+  time: 87530
+}, {
+  pos: [0.602599999999999, 0.164795],
+  time: 88140
+}, {
+  pos: [0.633079999999999, 0.125915],
+  time: 88620
+}, {
+  pos: [0.596119999999999, 0.1],
+  time: 89060
+}, {
+  pos: [0.611119999999999, 0.1],
+  time: 89300
+}, {
+  pos: [0.567599999999999, 0.1336],
+  time: 89940
+}, {
+  pos: [0.508799999999999, 0.12232],
+  time: 90420
+}, {
+  pos: [0.493104999999999, 0.139305],
+  time: 90850
+}, {
+  pos: [0.510854999999999, 0.165055],
+  time: 91100
+}, {
+  pos: [0.554744999999999, 0.192775],
+  time: 91760
+}, {
+  pos: [0.577749999999999, 0.170845],
+  time: 92190
+}, {
+  pos: [0.588749999999999, 0.157345],
+  time: 92390
+}, {
+  pos: [0.580699999999999, 0.129515],
+  time: 92620
+}, {
+  pos: [0.571739999999999, 0.125595],
+  time: 92900
+}, {
+  pos: [0.544789999999999, 0.186645],
+  time: 93450
+}, {
+  pos: [0.595404999999999, 0.21288],
+  time: 93980
+}, {
+  pos: [0.547029999999999, 0.168555],
+  time: 94430
+}, {
+  pos: [0.572029999999999, 0.189055],
+  time: 94680
+}, {
+  pos: [0.509784999999999, 0.208525],
+  time: 95270
+}, {
+  pos: [0.500774999999999, 0.183615],
+  time: 95800
+}, {
+  pos: [0.553354999999999, 0.178115],
+  time: 96240
+}, {
+  pos: [0.560944999999999, 0.162385],
+  time: 96460
+}, {
+  pos: [0.510844999999999, 0.126085],
+  time: 97060
+}, {
+  pos: [0.534594999999999, 0.1],
+  time: 97560
+}, {
+  pos: [0.539434999999999, 0.12288],
+  time: 98000
+}, {
+  pos: [0.554284999999999, 0.10992],
+  time: 98270
+}, {
+  pos: [0.500419999999999, 0.11733],
+  time: 98840
+}, {
+  pos: [0.516519999999999, 0.10113],
+  time: 99040
+}, {
+  pos: [0.495204999999999, 0.10722],
+  time: 99330
+}, {
+  pos: [0.468204999999999, 0.11466],
+  time: 99570
+}, {
+  pos: [0.455334999999999, 0.11154],
+  time: 99830
+}, {
+  pos: [0.455334999999999, 0.13386],
+  time: 100070
+}, {
+  pos: [0.399444999999999, 0.1587],
+  time: 100610
+}, {
+  pos: [0.342999999999999, 0.204545],
+  time: 101140
+}, {
+  pos: [0.304719999999999, 0.386375],
+  time: 102880
+}, {
+  pos: [0.315759999999999, 0.409375],
+  time: 104720
+}, {
+  pos: [0.158159999999999, 0.482975],
+  time: 106320
+}];
+module.exports = Beatmap;
+
+/***/ }),
+
+/***/ "./src/assets/beatmaps/beatmap4.js":
+/*!*****************************************!*\
+  !*** ./src/assets/beatmaps/beatmap4.js ***!
+  \*****************************************/
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/***/ ((module) => {
+
+//4 mario theme remix
+var Beatmap = [{
+  pos: [0.5, 0.5],
+  time: 1240
+}, {
+  pos: [0.47291, 0.51575],
+  time: 2500
+}, {
+  pos: [0.49821, 0.53921],
+  time: 2730
+}, {
+  pos: [0.48643, 0.5052],
+  time: 3110
+}, {
+  pos: [0.496195, 0.52368],
+  time: 3320
+}, {
+  pos: [0.51847, 0.52632],
+  time: 3650
+}, {
+  pos: [0.51872, 0.54057],
+  time: 4150
+}, {
+  pos: [0.50724, 0.56493],
+  time: 4710
+}, {
+  pos: [0.45272, 0.608875],
+  time: 5180
+}, {
+  pos: [0.440895, 0.615325],
+  time: 5610
+}, {
+  pos: [0.407615, 0.605965],
+  time: 6130
+}, {
+  pos: [0.404135, 0.61278],
+  time: 6420
+}, {
+  pos: [0.438295, 0.60382],
+  time: 6700
+}, {
+  pos: [0.423505, 0.598465],
+  time: 6870
+}, {
+  pos: [0.40074, 0.56294],
+  time: 7160
+}, {
+  pos: [0.41332, 0.564215],
+  time: 7330
+}, {
+  pos: [0.42494, 0.577375],
+  time: 7610
+}, {
+  pos: [0.4231, 0.586815],
+  time: 7770
+}, {
+  pos: [0.3971, 0.602935],
+  time: 8030
+}, {
+  pos: [0.387835, 0.59605],
+  time: 8200
+}, {
+  pos: [0.358015, 0.62349],
+  time: 8480
+}, {
+  pos: [0.339725, 0.6021],
+  time: 8790
+}, {
+  pos: [0.340175, 0.5988],
+  time: 8940
+}, {
+  pos: [0.321455, 0.60776],
+  time: 9100
+}, {
+  pos: [0.303395, 0.56433],
+  time: 9530
+}, {
+  pos: [0.303615, 0.59051],
+  time: 9970
+}, {
+  pos: [0.30269, 0.55943],
+  time: 10340
+}, {
+  pos: [0.301925, 0.534695],
+  time: 10850
+}, {
+  pos: [0.277025, 0.562295],
+  time: 11150
+}, {
+  pos: [0.259865, 0.543575],
+  time: 11410
+}, {
+  pos: [0.269315, 0.537455],
+  time: 11590
+}, {
+  pos: [0.285175, 0.556825],
+  time: 11850
+}, {
+  pos: [0.2686, 0.561245],
+  time: 12020
+}, {
+  pos: [0.24039, 0.563455],
+  time: 12280
+}, {
+  pos: [0.255605, 0.567195],
+  time: 12450
+}, {
+  pos: [0.254705, 0.547695],
+  time: 12750
+}, {
+  pos: [0.253425, 0.562175],
+  time: 12910
+}, {
+  pos: [0.228855, 0.587015],
+  time: 13180
+}, {
+  pos: [0.19275, 0.604995],
+  time: 13470
+}, {
+  pos: [0.184335, 0.625395],
+  time: 13640
+}, {
+  pos: [0.200315, 0.633725],
+  time: 13810
+}, {
+  pos: [0.17867, 0.6659],
+  time: 14200
+}, {
+  pos: [0.20459, 0.65024],
+  time: 14740
+}, {
+  pos: [0.2576, 0.644255],
+  time: 15310
+}, {
+  pos: [0.207155, 0.671045],
+  time: 15880
+}, {
+  pos: [0.208355, 0.681245],
+  time: 16480
+}, {
+  pos: [0.16205, 0.73826],
+  time: 17110
+}, {
+  pos: [0.2122, 0.706105],
+  time: 17700
+}, {
+  pos: [0.178545, 0.72333],
+  time: 18230
+}, {
+  pos: [0.169345, 0.74113],
+  time: 18430
+}, {
+  pos: [0.168725, 0.78949],
+  time: 19050
+}, {
+  pos: [0.138975, 0.80649],
+  time: 19550
+}, {
+  pos: [0.151725, 0.83574],
+  time: 20050
+}, {
+  pos: [0.172605, 0.8021],
+  time: 20630
+}, {
+  pos: [0.165065, 0.79137],
+  time: 21210
+}, {
+  pos: [0.19448, 0.731745],
+  time: 21740
+}, {
+  pos: [0.22716, 0.737445],
+  time: 22120
+}, {
+  pos: [0.18029, 0.776145],
+  time: 22550
+}, {
+  pos: [0.37368, 0.76799],
+  time: 24880
+}, {
+  pos: [0.34241, 0.833185],
+  time: 25470
+}, {
+  pos: [0.29381, 0.857485],
+  time: 26010
+}, {
+  pos: [0.32803, 0.833995],
+  time: 26590
+}, {
+  pos: [0.27943, 0.835195],
+  time: 27190
+}, {
+  pos: [0.2788, 0.87709],
+  time: 27820
+}, {
+  pos: [0.28982, 0.85766],
+  time: 28400
+}, {
+  pos: [0.31322, 0.844205],
+  time: 28790
+}, {
+  pos: [0.32982, 0.846405],
+  time: 28990
+}, {
+  pos: [0.352095, 0.84723],
+  time: 29540
+}, {
+  pos: [0.31763, 0.80575],
+  time: 30150
+}, {
+  pos: [0.27367, 0.74639],
+  time: 30710
+}, {
+  pos: [0.28599, 0.74051],
+  time: 31270
+}, {
+  pos: [0.279375, 0.7865],
+  time: 31900
+}, {
+  pos: [0.259995, 0.80645],
+  time: 32470
+}, {
+  pos: [0.21979, 0.787315],
+  time: 32900
+}, {
+  pos: [0.24267, 0.775315],
+  time: 33220
+}, {
+  pos: [0.29673, 0.83494],
+  time: 33750
+}, {
+  pos: [0.31587, 0.85408],
+  time: 34330
+}, {
+  pos: [0.3376, 0.87316],
+  time: 34860
+}, {
+  pos: [0.277435, 0.818035],
+  time: 35490
+}, {
+  pos: [0.318535, 0.888535],
+  time: 36090
+}, {
+  pos: [0.255535, 0.873415],
+  time: 36720
+}, {
+  pos: [0.303935, 0.9],
+  time: 37270
+}, {
+  pos: [0.354675, 0.9],
+  time: 37860
+}, {
+  pos: [0.410575, 0.9],
+  time: 38510
+}, {
+  pos: [0.340645, 0.9],
+  time: 39140
+}, {
+  pos: [0.411445, 0.9],
+  time: 39740
+}, {
+  pos: [0.44536, 0.8715],
+  time: 40310
+}, {
+  pos: [0.423085, 0.8726],
+  time: 40860
+}, {
+  pos: [0.478765, 0.86854],
+  time: 41440
+}, {
+  pos: [0.470645, 0.886375],
+  time: 41730
+}, {
+  pos: [0.445705, 0.878835],
+  time: 42020
+}, {
+  pos: [0.465705, 0.9],
+  time: 42270
+}, {
+  pos: [0.432455, 0.9],
+  time: 42650
+}, {
+  pos: [0.490075, 0.81759],
+  time: 43320
+}, {
+  pos: [0.472965, 0.847975],
+  time: 43910
+}, {
+  pos: [0.448455, 0.850555],
+  time: 44340
+}, {
+  pos: [0.448455, 0.81017],
+  time: 44750
+}, {
+  pos: [0.449755, 0.736395],
+  time: 45400
+}, {
+  pos: [0.463795, 0.756555],
+  time: 45640
+}, {
+  pos: [0.457315, 0.758445],
+  time: 45910
+}, {
+  pos: [0.46102, 0.792765],
+  time: 46300
+}, {
+  pos: [0.45777, 0.826515],
+  time: 46800
+}, {
+  pos: [0.44802, 0.776015],
+  time: 47300
+}, {
+  pos: [0.46434, 0.804235],
+  time: 47980
+}, {
+  pos: [0.49348, 0.781915],
+  time: 48600
+}, {
+  pos: [0.43373, 0.775165],
+  time: 49100
+}, {
+  pos: [0.404285, 0.791545],
+  time: 49490
+}, {
+  pos: [0.422915, 0.791005],
+  time: 50030
+}, {
+  pos: [0.449955, 0.781405],
+  time: 50350
+}, {
+  pos: [0.450795, 0.790785],
+  time: 50630
+}, {
+  pos: [0.46941, 0.809485],
+  time: 50800
+}, {
+  pos: [0.48137, 0.783745],
+  time: 51060
+}, {
+  pos: [0.46145, 0.780385],
+  time: 51300
+}, {
+  pos: [0.476975, 0.798785],
+  time: 51530
+}, {
+  pos: [0.487975, 0.805785],
+  time: 51930
+}, {
+  pos: [0.498295, 0.807945],
+  time: 52090
+}, {
+  pos: [0.491795, 0.803525],
+  time: 52350
+}, {
+  pos: [0.487235, 0.806165],
+  time: 52590
+}, {
+  pos: [0.497435, 0.788825],
+  time: 52760
+}, {
+  pos: [0.491915, 0.799705],
+  time: 52920
+}, {
+  pos: [0.483405, 0.795795],
+  time: 53380
+}, {
+  pos: [0.4418, 0.749155],
+  time: 53910
+}, {
+  pos: [0.39569, 0.693765],
+  time: 54490
+}, {
+  pos: [0.46289, 0.664365],
+  time: 55090
+}, {
+  pos: [0.53009, 0.642765],
+  time: 55690
+}, {
+  pos: [0.527715, 0.639265],
+  time: 55940
+}, {
+  pos: [0.49596, 0.613745],
+  time: 56230
+}, {
+  pos: [0.478365, 0.59224],
+  time: 56460
+}, {
+  pos: [0.448605, 0.58408],
+  time: 56700
+}, {
+  pos: [0.441005, 0.59018],
+  time: 56900
+}, {
+  pos: [0.433905, 0.56838],
+  time: 57100
+}, {
+  pos: [0.441385, 0.60731],
+  time: 57440
+}, {
+  pos: [0.367045, 0.532025],
+  time: 58070
+}, {
+  pos: [0.357245, 0.576545],
+  time: 58630
+}, {
+  pos: [0.361275, 0.583055],
+  time: 59250
+}, {
+  pos: [0.388875, 0.583955],
+  time: 59850
+}, {
+  pos: [0.334155, 0.602765],
+  time: 60420
+}, {
+  pos: [0.329955, 0.588605],
+  time: 60660
+}, {
+  pos: [0.315915, 0.598485],
+  time: 60920
+}, {
+  pos: [0.299815, 0.58618],
+  time: 61150
+}, {
+  pos: [0.28069, 0.59968],
+  time: 61400
+}, {
+  pos: [0.300535, 0.58897],
+  time: 61610
+}, {
+  pos: [0.253215, 0.65785],
+  time: 62170
+}, {
+  pos: [0.277635, 0.73837],
+  time: 62830
+}, {
+  pos: [0.243995, 0.66848],
+  time: 63410
+}, {
+  pos: [0.197195, 0.63068],
+  time: 64010
+}, {
+  pos: [0.131645, 0.632675],
+  time: 64580
+}, {
+  pos: [0.11719, 0.571905],
+  time: 65170
+}, {
+  pos: [0.109315, 0.54503],
+  time: 65420
+}, {
+  pos: [0.122705, 0.5735],
+  time: 65680
+}, {
+  pos: [0.129205, 0.5971],
+  time: 65880
+}, {
+  pos: [0.12133, 0.605395],
+  time: 66090
+}, {
+  pos: [0.14425, 0.623395],
+  time: 66330
+}, {
+  pos: [0.12229, 0.628195],
+  time: 66570
+}, {
+  pos: [0.1, 0.646725],
+  time: 66910
+}, {
+  pos: [0.1, 0.63795],
+  time: 67560
+}, {
+  pos: [0.1, 0.67548],
+  time: 68100
+}, {
+  pos: [0.1, 0.682725],
+  time: 68730
+}, {
+  pos: [0.1, 0.732025],
+  time: 69310
+}, {
+  pos: [0.170505, 0.66329],
+  time: 69900
+}, {
+  pos: [0.154515, 0.63573],
+  time: 70160
+}, {
+  pos: [0.151395, 0.66511],
+  time: 70420
+}, {
+  pos: [0.130875, 0.643925],
+  time: 70610
+}, {
+  pos: [0.11001, 0.667325],
+  time: 71000
+}, {
+  pos: [0.1, 0.60212],
+  time: 71630
+}, {
+  pos: [0.15831, 0.703865],
+  time: 72820
+}, {
+  pos: [0.21921, 0.739565],
+  time: 73420
+}, {
+  pos: [0.16188, 0.776105],
+  time: 74050
+}, {
+  pos: [0.11708, 0.840745],
+  time: 74690
+}, {
+  pos: [0.1, 0.839905],
+  time: 75250
+}, {
+  pos: [0.1, 0.85082],
+  time: 75840
+}, {
+  pos: [0.1, 0.877595],
+  time: 76470
+}, {
+  pos: [0.156, 0.891035],
+  time: 77110
+}, {
+  pos: [0.117045, 0.856055],
+  time: 77640
+}, {
+  pos: [0.1, 0.784445],
+  time: 78260
+}, {
+  pos: [0.1, 0.728645],
+  time: 78860
+}, {
+  pos: [0.1, 0.66512],
+  time: 79410
+}, {
+  pos: [0.12898, 0.64272],
+  time: 79690
+}, {
+  pos: [0.148285, 0.668625],
+  time: 80020
+}, {
+  pos: [0.13654, 0.69574],
+  time: 80310
+}, {
+  pos: [0.1, 0.6655],
+  time: 80670
+}, {
+  pos: [0.127795, 0.654535],
+  time: 81180
+}, {
+  pos: [0.137715, 0.605895],
+  time: 81820
+}, {
+  pos: [0.177995, 0.55952],
+  time: 82350
+}, {
+  pos: [0.10964, 0.490535],
+  time: 82980
+}, {
+  pos: [0.1, 0.499815],
+  time: 83560
+}, {
+  pos: [0.1, 0.473855],
+  time: 84150
+}, {
+  pos: [0.1, 0.478415],
+  time: 84390
+}, {
+  pos: [0.1, 0.468665],
+  time: 84690
+}, {
+  pos: [0.111875, 0.48909],
+  time: 84880
+}, {
+  pos: [0.113675, 0.49899],
+  time: 85080
+}, {
+  pos: [0.136075, 0.48289],
+  time: 85280
+}, {
+  pos: [0.124735, 0.476275],
+  time: 85550
+}, {
+  pos: [0.16673, 0.44242],
+  time: 85920
+}, {
+  pos: [0.1, 0.404305],
+  time: 86550
+}, {
+  pos: [0.1, 0.390095],
+  time: 87130
+}, {
+  pos: [0.15856, 0.314455],
+  time: 87740
+}, {
+  pos: [0.164545, 0.24106],
+  time: 88370
+}, {
+  pos: [0.153445, 0.20176],
+  time: 88970
+}, {
+  pos: [0.1, 0.13288],
+  time: 89530
+}, {
+  pos: [0.15814, 0.18589],
+  time: 90100
+}, {
+  pos: [0.1303, 0.13021],
+  time: 90740
+}, {
+  pos: [0.155325, 0.1],
+  time: 91390
+}, {
+  pos: [0.168485, 0.1],
+  time: 91950
+}, {
+  pos: [0.210485, 0.1],
+  time: 92550
+}, {
+  pos: [0.279085, 0.1],
+  time: 93110
+}, {
+  pos: [0.31599, 0.11525],
+  time: 93720
+}, {
+  pos: [0.325135, 0.1],
+  time: 94310
+}, {
+  pos: [0.374335, 0.1],
+  time: 94910
+}, {
+  pos: [0.41888, 0.1],
+  time: 95500
+}, {
+  pos: [0.41603, 0.1],
+  time: 96070
+}, {
+  pos: [0.44966, 0.1],
+  time: 96660
+}, {
+  pos: [0.45986, 0.1147],
+  time: 97260
+}, {
+  pos: [0.52646, 0.133],
+  time: 97860
+}, {
+  pos: [0.496665, 0.18256],
+  time: 98450
+}, {
+  pos: [0.567715, 0.16777],
+  time: 99030
+}, {
+  pos: [0.624415, 0.22627],
+  time: 99630
+}, {
+  pos: [0.579615, 0.26787],
+  time: 100270
+}, {
+  pos: [0.572415, 0.29577],
+  time: 100870
+}, {
+  pos: [0.617495, 0.32705],
+  time: 101330
+}, {
+  pos: [0.586945, 0.361825],
+  time: 101980
+}, {
+  pos: [0.536115, 0.371485],
+  time: 102440
+}, {
+  pos: [0.522515, 0.390485],
+  time: 102840
+}, {
+  pos: [0.58142, 0.30421],
+  time: 104030
+}, {
+  pos: [0.54573, 0.400075],
+  time: 104860
+}, {
+  pos: [0.49036, 0.318735],
+  time: 105840
+}, {
+  pos: [0.39802, 0.363195],
+  time: 107550
+}, {
+  pos: [0.485895, 0.430645],
+  time: 108500
+}];
+module.exports = Beatmap;
+
+/***/ }),
+
+/***/ "./src/assets/beatmaps/beatmap5.js":
+/*!*****************************************!*\
+  !*** ./src/assets/beatmaps/beatmap5.js ***!
+  \*****************************************/
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/***/ ((module) => {
+
+//5 theory of eternity
+var Beatmap = [{
+  pos: [0.5, 0.5],
+  time: 1320
+}, {
+  pos: [0.4483, 0.52552],
+  time: 1760
+}, {
+  pos: [0.46199, 0.557895],
+  time: 2130
+}, {
+  pos: [0.45706, 0.527635],
+  time: 2470
+}, {
+  pos: [0.46314, 0.553855],
+  time: 2850
+}, {
+  pos: [0.48955, 0.574755],
+  time: 3230
+}, {
+  pos: [0.44115, 0.558355],
+  time: 3630
+}, {
+  pos: [0.47243, 0.526905],
+  time: 3970
+}, {
+  pos: [0.48269, 0.483205],
+  time: 4350
+}, {
+  pos: [0.46345, 0.517615],
+  time: 4720
+}, {
+  pos: [0.481395, 0.55813],
+  time: 5090
+}, {
+  pos: [0.51673, 0.574965],
+  time: 5460
+}, {
+  pos: [0.47899, 0.54185],
+  time: 5830
+}, {
+  pos: [0.49685, 0.52494],
+  time: 6210
+}, {
+  pos: [0.47237, 0.50496],
+  time: 6570
+}, {
+  pos: [0.44596, 0.50838],
+  time: 6950
+}, {
+  pos: [0.43642, 0.47418],
+  time: 7310
+}, {
+  pos: [0.4653, 0.48805],
+  time: 7690
+}, {
+  pos: [0.43452, 0.45169],
+  time: 8050
+}, {
+  pos: [0.4707, 0.42847],
+  time: 8410
+}, {
+  pos: [0.51246, 0.40489],
+  time: 8770
+}, {
+  pos: [0.4725, 0.43351],
+  time: 9130
+}, {
+  pos: [0.510135, 0.425905],
+  time: 9520
+}, {
+  pos: [0.476295, 0.381445],
+  time: 9880
+}, {
+  pos: [0.449385, 0.36487],
+  time: 10270
+}, {
+  pos: [0.454965, 0.32689],
+  time: 10630
+}, {
+  pos: [0.478905, 0.30547],
+  time: 10990
+}, {
+  pos: [0.461145, 0.3088],
+  time: 11360
+}, {
+  pos: [0.45081, 0.33337],
+  time: 11750
+}, {
+  pos: [0.473235, 0.28501],
+  time: 12140
+}, {
+  pos: [0.46491, 0.24801],
+  time: 12510
+}, {
+  pos: [0.49291, 0.21231],
+  time: 12860
+}, {
+  pos: [0.453185, 0.23786],
+  time: 13210
+}, {
+  pos: [0.487185, 0.20346],
+  time: 13610
+}, {
+  pos: [0.50069, 0.19606],
+  time: 13980
+}, {
+  pos: [0.534035, 0.19411],
+  time: 14370
+}, {
+  pos: [0.56641, 0.182455],
+  time: 14740
+}, {
+  pos: [0.58494, 0.202515],
+  time: 15080
+}, {
+  pos: [0.55145, 0.213735],
+  time: 15420
+}, {
+  pos: [0.51905, 0.200055],
+  time: 15780
+}, {
+  pos: [0.47873, 0.214995],
+  time: 16140
+}, {
+  pos: [0.46258, 0.231715],
+  time: 16520
+}, {
+  pos: [0.46296, 0.204735],
+  time: 16900
+}, {
+  pos: [0.424155, 0.23847],
+  time: 17290
+}, {
+  pos: [0.424875, 0.22479],
+  time: 17650
+}, {
+  pos: [0.437455, 0.21833],
+  time: 17990
+}, {
+  pos: [0.409715, 0.2588],
+  time: 18370
+}, {
+  pos: [0.427385, 0.27647],
+  time: 18750
+}, {
+  pos: [0.38465, 0.27943],
+  time: 19120
+}, {
+  pos: [0.37401, 0.26233],
+  time: 19500
+}, {
+  pos: [0.35475, 0.22939],
+  time: 19860
+}, {
+  pos: [0.354165, 0.21379],
+  time: 20250
+}, {
+  pos: [0.364805, 0.23241],
+  time: 20630
+}, {
+  pos: [0.40453, 0.247985],
+  time: 20980
+}, {
+  pos: [0.36385, 0.214145],
+  time: 21340
+}, {
+  pos: [0.36875, 0.213445],
+  time: 21690
+}, {
+  pos: [0.40979, 0.168225],
+  time: 22070
+}, {
+  pos: [0.423245, 0.193185],
+  time: 22460
+}, {
+  pos: [0.429325, 0.177415],
+  time: 22840
+}, {
+  pos: [0.416215, 0.170765],
+  time: 23220
+}, {
+  pos: [0.385875, 0.15615],
+  time: 23590
+}, {
+  pos: [0.358515, 0.20308],
+  time: 23970
+}, {
+  pos: [0.327315, 0.18787],
+  time: 24360
+}, {
+  pos: [0.32504, 0.144995],
+  time: 24710
+}, {
+  pos: [0.33473, 0.122385],
+  time: 25050
+}, {
+  pos: [0.32941, 0.131505],
+  time: 25430
+}, {
+  pos: [0.34212, 0.16514],
+  time: 25740
+}, {
+  pos: [0.3136, 0.14933],
+  time: 26050
+}, {
+  pos: [0.33747, 0.1608],
+  time: 26360
+}, {
+  pos: [0.357245, 0.1748],
+  time: 26710
+}, {
+  pos: [0.381625, 0.185135],
+  time: 27240
+}, {
+  pos: [0.340965, 0.198245],
+  time: 27620
+}, {
+  pos: [0.295965, 0.189245],
+  time: 28020
+}, {
+  pos: [0.298635, 0.185135],
+  time: 28080
+}, {
+  pos: [0.30266, 0.159585],
+  time: 28430
+}, {
+  pos: [0.33851, 0.130335],
+  time: 28730
+}, {
+  pos: [0.37707, 0.162655],
+  time: 29050
+}, {
+  pos: [0.39453, 0.141415],
+  time: 29410
+}, {
+  pos: [0.34001, 0.10217],
+  time: 29880
+}, {
+  pos: [0.37256, 0.1],
+  time: 30300
+}, {
+  pos: [0.35996, 0.1],
+  time: 30660
+}, {
+  pos: [0.37587, 0.1],
+  time: 31030
+}, {
+  pos: [0.41025, 0.1036],
+  time: 31390
+}, {
+  pos: [0.43335, 0.1],
+  time: 31690
+}, {
+  pos: [0.39591, 0.1],
+  time: 32010
+}, {
+  pos: [0.36191, 0.11717],
+  time: 32350
+}, {
+  pos: [0.39199, 0.1261],
+  time: 32820
+}, {
+  pos: [0.364315, 0.161565],
+  time: 33230
+}, {
+  pos: [0.373915, 0.204965],
+  time: 33630
+}, {
+  pos: [0.39926, 0.185355],
+  time: 34000
+}, {
+  pos: [0.399085, 0.22473],
+  time: 34350
+}, {
+  pos: [0.388545, 0.25883],
+  time: 34660
+}, {
+  pos: [0.388255, 0.234035],
+  time: 34950
+}, {
+  pos: [0.369355, 0.200375],
+  time: 35310
+}, {
+  pos: [0.318955, 0.156275],
+  time: 35760
+}, {
+  pos: [0.329615, 0.11179],
+  time: 36170
+}, {
+  pos: [0.305675, 0.1],
+  time: 36590
+}, {
+  pos: [0.263735, 0.1],
+  time: 36950
+}, {
+  pos: [0.30462, 0.1],
+  time: 37320
+}, {
+  pos: [0.337345, 0.1],
+  time: 37670
+}, {
+  pos: [0.317545, 0.1],
+  time: 38030
+}, {
+  pos: [0.292215, 0.1],
+  time: 38370
+}, {
+  pos: [0.274995, 0.11512],
+  time: 38790
+}, {
+  pos: [0.262125, 0.1],
+  time: 39180
+}, {
+  pos: [0.276525, 0.12178],
+  time: 39540
+}, {
+  pos: [0.251635, 0.1],
+  time: 39920
+}, {
+  pos: [0.246535, 0.10714],
+  time: 40260
+}, {
+  pos: [0.243435, 0.11117],
+  time: 40570
+}, {
+  pos: [0.218235, 0.1],
+  time: 40850
+}, {
+  pos: [0.207235, 0.1],
+  time: 41250
+}, {
+  pos: [0.181015, 0.14462],
+  time: 41710
+}, {
+  pos: [0.149215, 0.12942],
+  time: 42110
+}, {
+  pos: [0.165235, 0.15696],
+  time: 42470
+}, {
+  pos: [0.120385, 0.149745],
+  time: 42860
+}, {
+  pos: [0.120725, 0.111665],
+  time: 43200
+}, {
+  pos: [0.131285, 0.1],
+  time: 43530
+}, {
+  pos: [0.104895, 0.1],
+  time: 43790
+}, {
+  pos: [0.103845, 0.1],
+  time: 44140
+}, {
+  pos: [0.102315, 0.1],
+  time: 44650
+}, {
+  pos: [0.119915, 0.12398],
+  time: 45090
+}, {
+  pos: [0.1, 0.15998],
+  time: 45450
+}, {
+  pos: [0.14407, 0.138335],
+  time: 45840
+}, {
+  pos: [0.15053, 0.156695],
+  time: 46180
+}, {
+  pos: [0.13433, 0.153395],
+  time: 46480
+}, {
+  pos: [0.154485, 0.12802],
+  time: 46770
+}, {
+  pos: [0.171205, 0.13714],
+  time: 47150
+}, {
+  pos: [0.156015, 0.10039],
+  time: 47640
+}, {
+  pos: [0.182475, 0.13063],
+  time: 48060
+}, {
+  pos: [0.17415, 0.114535],
+  time: 48430
+}, {
+  pos: [0.13197, 0.1],
+  time: 48810
+}, {
+  pos: [0.15496, 0.1],
+  time: 49190
+}, {
+  pos: [0.188735, 0.1],
+  time: 49540
+}, {
+  pos: [0.22074, 0.1],
+  time: 49910
+}, {
+  pos: [0.25314, 0.14482],
+  time: 50270
+}, {
+  pos: [0.21354, 0.10108],
+  time: 50630
+}, {
+  pos: [0.19587, 0.1],
+  time: 51010
+}, {
+  pos: [0.17769, 0.14248],
+  time: 51370
+}, {
+  pos: [0.19602, 0.144625],
+  time: 51760
+}, {
+  pos: [0.2322, 0.153085],
+  time: 52120
+}, {
+  pos: [0.26883, 0.13773],
+  time: 52490
+}, {
+  pos: [0.23265, 0.14709],
+  time: 52850
+}, {
+  pos: [0.26085, 0.17909],
+  time: 53250
+}, {
+  pos: [0.26427, 0.14641],
+  time: 53630
+}, {
+  pos: [0.29987, 0.14101],
+  time: 54030
+}, {
+  pos: [0.290245, 0.15326],
+  time: 54380
+}, {
+  pos: [0.26268, 0.166025],
+  time: 54750
+}, {
+  pos: [0.26898, 0.165305],
+  time: 55110
+}, {
+  pos: [0.26688, 0.20503],
+  time: 55460
+}, {
+  pos: [0.2433, 0.19495],
+  time: 55820
+}, {
+  pos: [0.1987, 0.21735],
+  time: 56220
+}, {
+  pos: [0.17638, 0.23031],
+  time: 56580
+}, {
+  pos: [0.13552, 0.21753],
+  time: 56940
+}, {
+  pos: [0.15712, 0.22869],
+  time: 57300
+}, {
+  pos: [0.13723, 0.19809],
+  time: 57640
+}, {
+  pos: [0.15403, 0.2382],
+  time: 58060
+}, {
+  pos: [0.114625, 0.202125],
+  time: 58430
+}, {
+  pos: [0.11935, 0.231525],
+  time: 58780
+}, {
+  pos: [0.107415, 0.19603],
+  time: 59090
+}, {
+  pos: [0.1, 0.185095],
+  time: 59360
+}, {
+  pos: [0.1, 0.163055],
+  time: 59650
+}, {
+  pos: [0.12322, 0.184115],
+  time: 59920
+}, {
+  pos: [0.11733, 0.216035],
+  time: 60300
+}, {
+  pos: [0.15524, 0.197165],
+  time: 60640
+}, {
+  pos: [0.15524, 0.201305],
+  time: 61000
+}, {
+  pos: [0.147365, 0.16578],
+  time: 61350
+}, {
+  pos: [0.11795, 0.19316],
+  time: 61720
+}, {
+  pos: [0.14035, 0.19141],
+  time: 62070
+}, {
+  pos: [0.12826, 0.20233],
+  time: 62460
+}, {
+  pos: [0.1, 0.20688],
+  time: 62810
+}, {
+  pos: [0.106435, 0.171195],
+  time: 63200
+}, {
+  pos: [0.1, 0.179355],
+  time: 63540
+}, {
+  pos: [0.1, 0.20061],
+  time: 63930
+}, {
+  pos: [0.1, 0.20907],
+  time: 64290
+}, {
+  pos: [0.11258, 0.17133],
+  time: 64660
+}, {
+  pos: [0.1, 0.18849],
+  time: 65050
+}, {
+  pos: [0.1, 0.21225],
+  time: 65410
+}, {
+  pos: [0.1, 0.18201],
+  time: 65770
+}, {
+  pos: [0.104995, 0.19385],
+  time: 66140
+}, {
+  pos: [0.148675, 0.14618],
+  time: 66560
+}, {
+  pos: [0.181795, 0.16814],
+  time: 66920
+}, {
+  pos: [0.191515, 0.19766],
+  time: 67280
+}, {
+  pos: [0.164725, 0.21723],
+  time: 67660
+}, {
+  pos: [0.205765, 0.23739],
+  time: 68020
+}, {
+  pos: [0.240175, 0.19965],
+  time: 68390
+}, {
+  pos: [0.242275, 0.197375],
+  time: 68740
+}, {
+  pos: [0.219475, 0.241775],
+  time: 69140
+}, {
+  pos: [0.186175, 0.280835],
+  time: 69500
+}, {
+  pos: [0.18007, 0.264555],
+  time: 69870
+}, {
+  pos: [0.189505, 0.258635],
+  time: 70240
+}, {
+  pos: [0.19563, 0.281735],
+  time: 70590
+}, {
+  pos: [0.15823, 0.262695],
+  time: 70930
+}, {
+  pos: [0.16345, 0.246745],
+  time: 71220
+}, {
+  pos: [0.1836, 0.226595],
+  time: 71480
+}, {
+  pos: [0.17135, 0.230095],
+  time: 71730
+}, {
+  pos: [0.21239, 0.274015],
+  time: 72090
+}, {
+  pos: [0.197, 0.236965],
+  time: 72470
+}, {
+  pos: [0.18972, 0.222265],
+  time: 72750
+}, {
+  pos: [0.18853, 0.237395],
+  time: 73090
+}, {
+  pos: [0.201405, 0.207645],
+  time: 73340
+}, {
+  pos: [0.170265, 0.225105],
+  time: 73700
+}, {
+  pos: [0.151905, 0.231585],
+  time: 73880
+}, {
+  pos: [0.139125, 0.229065],
+  time: 74240
+}, {
+  pos: [0.119925, 0.230665],
+  time: 74560
+}, {
+  pos: [0.112425, 0.25679],
+  time: 74810
+}, {
+  pos: [0.1, 0.28199],
+  time: 75210
+}, {
+  pos: [0.11408, 0.28679],
+  time: 75370
+}, {
+  pos: [0.105855, 0.245315],
+  time: 75720
+}, {
+  pos: [0.1, 0.215715],
+  time: 76040
+}, {
+  pos: [0.1, 0.203295],
+  time: 76270
+}, {
+  pos: [0.1, 0.20953],
+  time: 76700
+}, {
+  pos: [0.1, 0.21257],
+  time: 76860
+}, {
+  pos: [0.1, 0.20897],
+  time: 77220
+}, {
+  pos: [0.1, 0.183085],
+  time: 77530
+}, {
+  pos: [0.1, 0.185085],
+  time: 77780
+}, {
+  pos: [0.1, 0.149085],
+  time: 78180
+}, {
+  pos: [0.107225, 0.16617],
+  time: 78350
+}, {
+  pos: [0.105185, 0.1337],
+  time: 78690
+}, {
+  pos: [0.1, 0.17146],
+  time: 79010
+}, {
+  pos: [0.121965, 0.14593],
+  time: 79240
+}, {
+  pos: [0.116965, 0.17613],
+  time: 79640
+}, {
+  pos: [0.126415, 0.179805],
+  time: 79790
+}, {
+  pos: [0.166015, 0.205365],
+  time: 80150
+}, {
+  pos: [0.14441, 0.234365],
+  time: 80440
+}, {
+  pos: [0.12956, 0.226535],
+  time: 80710
+}, {
+  pos: [0.1, 0.2405],
+  time: 81200
+}, {
+  pos: [0.1, 0.1877],
+  time: 81640
+}, {
+  pos: [0.109435, 0.208605],
+  time: 82010
+}, {
+  pos: [0.1, 0.172205],
+  time: 82360
+}, {
+  pos: [0.2066, 0.164825],
+  time: 84000
+}, {
+  pos: [0.23091, 0.152345],
+  time: 84260
+}, {
+  pos: [0.24264, 0.186685],
+  time: 84600
+}, {
+  pos: [0.23238, 0.196945],
+  time: 84980
+}, {
+  pos: [0.19558, 0.170345],
+  time: 85380
+}, {
+  pos: [0.18041, 0.178485],
+  time: 85750
+}, {
+  pos: [0.15801, 0.16046],
+  time: 86100
+}, {
+  pos: [0.16277, 0.16539],
+  time: 86440
+}, {
+  pos: [0.18881, 0.13935],
+  time: 86860
+}, {
+  pos: [0.154685, 0.132525],
+  time: 87250
+}, {
+  pos: [0.174915, 0.1],
+  time: 87590
+}, {
+  pos: [0.21321, 0.131265],
+  time: 87960
+}, {
+  pos: [0.25349, 0.120435],
+  time: 88340
+}, {
+  pos: [0.23589, 0.123035],
+  time: 88740
+}, {
+  pos: [0.26163, 0.125015],
+  time: 89100
+}, {
+  pos: [0.24149, 0.1],
+  time: 89480
+}, {
+  pos: [0.19793, 0.1],
+  time: 89840
+}, {
+  pos: [0.19603, 0.11273],
+  time: 90220
+}, {
+  pos: [0.189185, 0.14381],
+  time: 90590
+}, {
+  pos: [0.174135, 0.18056],
+  time: 90940
+}, {
+  pos: [0.138085, 0.19771],
+  time: 91290
+}, {
+  pos: [0.132285, 0.23151],
+  time: 91690
+}, {
+  pos: [0.176565, 0.20271],
+  time: 92050
+}, {
+  pos: [0.210405, 0.23313],
+  time: 92410
+}, {
+  pos: [0.185705, 0.19171],
+  time: 92790
+}, {
+  pos: [0.228835, 0.22895],
+  time: 93170
+}, {
+  pos: [0.265465, 0.23191],
+  time: 93540
+}, {
+  pos: [0.27544, 0.212835],
+  time: 93890
+}, {
+  pos: [0.31207, 0.18527],
+  time: 94260
+}, {
+  pos: [0.342925, 0.1889],
+  time: 94590
+}, {
+  pos: [0.329965, 0.178505],
+  time: 94860
+}, {
+  pos: [0.30229, 0.147995],
+  time: 95130
+}, {
+  pos: [0.31621, 0.149795],
+  time: 95370
+}, {
+  pos: [0.34321, 0.133595],
+  time: 95770
+}, {
+  pos: [0.34853, 0.149935],
+  time: 96150
+}, {
+  pos: [0.325255, 0.162185],
+  time: 96500
+}, {
+  pos: [0.360355, 0.183965],
+  time: 96860
+}, {
+  pos: [0.357885, 0.150525],
+  time: 97240
+}, {
+  pos: [0.376065, 0.194805],
+  time: 97600
+}, {
+  pos: [0.34369, 0.21127],
+  time: 97970
+}, {
+  pos: [0.37015, 0.20443],
+  time: 98330
+}, {
+  pos: [0.3464, 0.18619],
+  time: 98710
+}, {
+  pos: [0.308765, 0.228115],
+  time: 99100
+}, {
+  pos: [0.274815, 0.24264],
+  time: 99450
+}, {
+  pos: [0.255195, 0.21024],
+  time: 99810
+}, {
+  pos: [0.219675, 0.21764],
+  time: 100180
+}, {
+  pos: [0.178605, 0.19063],
+  time: 100550
+}, {
+  pos: [0.20025, 0.152995],
+  time: 100940
+}, {
+  pos: [0.19532, 0.110835],
+  time: 101280
+}, {
+  pos: [0.24149, 0.1],
+  time: 101660
+}, {
+  pos: [0.28769, 0.1],
+  time: 102060
+}, {
+  pos: [0.29705, 0.1225],
+  time: 102420
+}, {
+  pos: [0.310555, 0.1],
+  time: 102790
+}, {
+  pos: [0.34774, 0.11628],
+  time: 103160
+}, {
+  pos: [0.35962, 0.1],
+  time: 103520
+}, {
+  pos: [0.35577, 0.1],
+  time: 103870
+}, {
+  pos: [0.387775, 0.130525],
+  time: 104240
+}, {
+  pos: [0.362125, 0.155605],
+  time: 104620
+}, {
+  pos: [0.370405, 0.168565],
+  time: 104980
+}, {
+  pos: [0.324005, 0.150965],
+  time: 105380
+}, {
+  pos: [0.291785, 0.192905],
+  time: 105740
+}, {
+  pos: [0.300525, 0.193285],
+  time: 106120
+}, {
+  pos: [0.284865, 0.1711],
+  time: 106410
+}, {
+  pos: [0.307615, 0.151975],
+  time: 106660
+}, {
+  pos: [0.31399, 0.1471],
+  time: 106910
+}, {
+  pos: [0.33361, 0.12388],
+  time: 107270
+}, {
+  pos: [0.33305, 0.1402],
+  time: 107430
+}, {
+  pos: [0.288465, 0.122995],
+  time: 107800
+}, {
+  pos: [0.273075, 0.1072],
+  time: 108070
+}, {
+  pos: [0.277135, 0.1],
+  time: 108360
+}, {
+  pos: [0.28186, 0.1],
+  time: 108510
+}, {
+  pos: [0.30685, 0.1],
+  time: 108850
+}, {
+  pos: [0.30333, 0.1],
+  time: 109010
+}, {
+  pos: [0.303885, 0.1],
+  time: 109380
+}, {
+  pos: [0.299925, 0.1],
+  time: 109620
+}, {
+  pos: [0.522485, 0.2712],
+  time: 111760
+}];
+module.exports = Beatmap;
+
+/***/ }),
+
+/***/ "./src/assets/beatmaps/beatmap6.js":
+/*!*****************************************!*\
+  !*** ./src/assets/beatmaps/beatmap6.js ***!
+  \*****************************************/
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/***/ ((module) => {
+
+//6 r3hab
+var Beatmap = [{
+  pos: [0.5, 0.5],
+  time: 1190
+}, {
+  pos: [0.4445, 0.453875],
+  time: 1940
+}, {
+  pos: [0.49075, 0.5595],
+  time: 3190
+}, {
+  pos: [0.4855, 0.589875],
+  time: 3940
+}, {
+  pos: [0.4243, 0.650395],
+  time: 5300
+}, {
+  pos: [0.506, 0.570215],
+  time: 6060
+}, {
+  pos: [0.47786, 0.687465],
+  time: 7400
+}, {
+  pos: [0.42578, 0.664525],
+  time: 8020
+}, {
+  pos: [0.51414, 0.770275],
+  time: 8960
+}, {
+  pos: [0.57192, 0.806455],
+  time: 9500
+}, {
+  pos: [0.588045, 0.833115],
+  time: 9930
+}, {
+  pos: [0.626445, 0.866915],
+  time: 10330
+}, {
+  pos: [0.613795, 0.9],
+  time: 10880
+}, {
+  pos: [0.67309, 0.854275],
+  time: 11470
+}, {
+  pos: [0.62534, 0.868275],
+  time: 11970
+}, {
+  pos: [0.623, 0.862785],
+  time: 12030
+}, {
+  pos: [0.686865, 0.801835],
+  time: 12560
+}, {
+  pos: [0.67094, 0.843975],
+  time: 13050
+}, {
+  pos: [0.71748, 0.778975],
+  time: 13570
+}, {
+  pos: [0.77949, 0.755655],
+  time: 14100
+}, {
+  pos: [0.74196, 0.750525],
+  time: 14640
+}, {
+  pos: [0.788265, 0.758855],
+  time: 15130
+}, {
+  pos: [0.793205, 0.740395],
+  time: 15650
+}, {
+  pos: [0.79601, 0.72229],
+  time: 16160
+}, {
+  pos: [0.83326, 0.68904],
+  time: 16660
+}, {
+  pos: [0.85276, 0.70829],
+  time: 17160
+}, {
+  pos: [0.82728, 0.71765],
+  time: 17680
+}, {
+  pos: [0.84488, 0.7413],
+  time: 18230
+}, {
+  pos: [0.795325, 0.68618],
+  time: 18760
+}, {
+  pos: [0.806395, 0.66404],
+  time: 19300
+}, {
+  pos: [0.81249, 0.63065],
+  time: 19830
+}, {
+  pos: [0.84199, 0.6154],
+  time: 20330
+}, {
+  pos: [0.80849, 0.66865],
+  time: 20830
+}, {
+  pos: [0.780315, 0.64317],
+  time: 21320
+}, {
+  pos: [0.741165, 0.59907],
+  time: 21770
+}, {
+  pos: [0.788725, 0.57734],
+  time: 22180
+}, {
+  pos: [0.842275, 0.62459],
+  time: 22810
+}, {
+  pos: [0.814075, 0.64484],
+  time: 23110
+}, {
+  pos: [0.80493, 0.67646],
+  time: 23420
+}, {
+  pos: [0.80993, 0.66506],
+  time: 23820
+}, {
+  pos: [0.82793, 0.64106],
+  time: 24220
+}, {
+  pos: [0.836485, 0.69593],
+  time: 24810
+}, {
+  pos: [0.783045, 0.63289],
+  time: 25450
+}, {
+  pos: [0.766965, 0.57481],
+  time: 25930
+}, {
+  pos: [0.826485, 0.53977],
+  time: 26410
+}, {
+  pos: [0.85864, 0.561895],
+  time: 27000
+}, {
+  pos: [0.87389, 0.585145],
+  time: 27500
+}, {
+  pos: [0.9, 0.554185],
+  time: 27980
+}, {
+  pos: [0.9, 0.569185],
+  time: 28480
+}, {
+  pos: [0.855215, 0.59648],
+  time: 29010
+}, {
+  pos: [0.78894, 0.529105],
+  time: 29560
+}, {
+  pos: [0.820475, 0.46683],
+  time: 30090
+}, {
+  pos: [0.819945, 0.442185],
+  time: 30620
+}, {
+  pos: [0.77237, 0.471335],
+  time: 31170
+}, {
+  pos: [0.709035, 0.521155],
+  time: 31700
+}, {
+  pos: [0.762765, 0.577855],
+  time: 32240
+}, {
+  pos: [0.805445, 0.597655],
+  time: 32680
+}, {
+  pos: [0.784775, 0.639525],
+  time: 33210
+}, {
+  pos: [0.76384, 0.70286],
+  time: 33740
+}, {
+  pos: [0.81134, 0.72161],
+  time: 34240
+}, {
+  pos: [0.86818, 0.73337],
+  time: 34730
+}, {
+  pos: [0.9, 0.75152],
+  time: 35280
+}, {
+  pos: [0.84762, 0.77906],
+  time: 35820
+}, {
+  pos: [0.79512, 0.76556],
+  time: 36320
+}, {
+  pos: [0.82944, 0.78932],
+  time: 36800
+}, {
+  pos: [0.87669, 0.82007],
+  time: 37300
+}, {
+  pos: [0.81108, 0.86327],
+  time: 37840
+}, {
+  pos: [0.779045, 0.9],
+  time: 38270
+}, {
+  pos: [0.7886, 0.9],
+  time: 38660
+}, {
+  pos: [0.730745, 0.86694],
+  time: 39530
+}, {
+  pos: [0.69656, 0.86006],
+  time: 39960
+}, {
+  pos: [0.73019, 0.830135],
+  time: 40530
+}, {
+  pos: [0.73254, 0.83037],
+  time: 41000
+}, {
+  pos: [0.71286, 0.82281],
+  time: 41240
+}, {
+  pos: [0.70436, 0.827185],
+  time: 41490
+}, {
+  pos: [0.73412, 0.840625],
+  time: 41730
+}, {
+  pos: [0.72251, 0.84508],
+  time: 42000
+}, {
+  pos: [0.72667, 0.86341],
+  time: 42260
+}, {
+  pos: [0.75061, 0.83723],
+  time: 42540
+}, {
+  pos: [0.733485, 0.846855],
+  time: 42790
+}, {
+  pos: [0.742845, 0.859465],
+  time: 43050
+}, {
+  pos: [0.769625, 0.860245],
+  time: 43310
+}, {
+  pos: [0.760135, 0.832295],
+  time: 43570
+}, {
+  pos: [0.725725, 0.79804],
+  time: 43880
+}, {
+  pos: [0.870625, 0.9],
+  time: 45140
+}, {
+  pos: [0.86683, 0.9],
+  time: 45370
+}, {
+  pos: [0.8394, 0.89155],
+  time: 45630
+}, {
+  pos: [0.81912, 0.89311],
+  time: 45870
+}, {
+  pos: [0.8094, 0.9],
+  time: 46140
+}, {
+  pos: [0.80664, 0.9],
+  time: 46380
+}, {
+  pos: [0.81614, 0.873375],
+  time: 46630
+}, {
+  pos: [0.78296, 0.861195],
+  time: 46910
+}, {
+  pos: [0.763835, 0.87182],
+  time: 47160
+}, {
+  pos: [0.767735, 0.86181],
+  time: 47420
+}, {
+  pos: [0.772215, 0.84543],
+  time: 47700
+}, {
+  pos: [0.765375, 0.83903],
+  time: 47780
+}, {
+  pos: [0.9, 0.74817],
+  time: 48960
+}, {
+  pos: [0.9, 0.72342],
+  time: 49260
+}, {
+  pos: [0.87705, 0.76077],
+  time: 49560
+}, {
+  pos: [0.85352, 0.76207],
+  time: 49820
+}, {
+  pos: [0.88952, 0.72832],
+  time: 50120
+}, {
+  pos: [0.80357, 0.83002],
+  time: 51020
+}, {
+  pos: [0.80222, 0.800185],
+  time: 51290
+}, {
+  pos: [0.79923, 0.782765],
+  time: 51550
+}, {
+  pos: [0.83001, 0.80828],
+  time: 51820
+}, {
+  pos: [0.863025, 0.839435],
+  time: 52130
+}, {
+  pos: [0.9, 0.864435],
+  time: 53130
+}, {
+  pos: [0.88781, 0.85328],
+  time: 53360
+}, {
+  pos: [0.9, 0.8768],
+  time: 53640
+}, {
+  pos: [0.9, 0.89304],
+  time: 53930
+}, {
+  pos: [0.9, 0.869955],
+  time: 54200
+}, {
+  pos: [0.9, 0.879055],
+  time: 54460
+}, {
+  pos: [0.9, 0.9],
+  time: 55000
+}, {
+  pos: [0.9, 0.889075],
+  time: 55230
+}, {
+  pos: [0.89839, 0.9],
+  time: 55690
+}, {
+  pos: [0.87907, 0.88712],
+  time: 55970
+}, {
+  pos: [0.81427, 0.8372],
+  time: 56930
+}, {
+  pos: [0.79377, 0.8123],
+  time: 57130
+}, {
+  pos: [0.79032, 0.835415],
+  time: 57360
+}, {
+  pos: [0.78972, 0.857415],
+  time: 57560
+}, {
+  pos: [0.760845, 0.836415],
+  time: 57810
+}, {
+  pos: [0.72957, 0.844515],
+  time: 58260
+}, {
+  pos: [0.73752, 0.78065],
+  time: 58790
+}, {
+  pos: [0.79027, 0.7464],
+  time: 59290
+}, {
+  pos: [0.73771, 0.76176],
+  time: 59770
+}, {
+  pos: [0.75968, 0.76475],
+  time: 60030
+}, {
+  pos: [0.72278, 0.761],
+  time: 60330
+}, {
+  pos: [0.72333, 0.74472],
+  time: 60550
+}, {
+  pos: [0.74508, 0.74907],
+  time: 60850
+}, {
+  pos: [0.76783, 0.77702],
+  time: 61110
+}, {
+  pos: [0.766615, 0.744485],
+  time: 61380
+}, {
+  pos: [0.746265, 0.72551],
+  time: 61930
+}, {
+  pos: [0.706765, 0.71276],
+  time: 62430
+}, {
+  pos: [0.692505, 0.74404],
+  time: 62890
+}, {
+  pos: [0.692995, 0.76707],
+  time: 63380
+}, {
+  pos: [0.73619, 0.708505],
+  time: 63910
+}, {
+  pos: [0.72494, 0.742005],
+  time: 64410
+}, {
+  pos: [0.727145, 0.743685],
+  time: 64480
+}, {
+  pos: [0.760595, 0.739785],
+  time: 64780
+}, {
+  pos: [0.77147, 0.75124],
+  time: 65070
+}, {
+  pos: [0.76147, 0.781865],
+  time: 65320
+}, {
+  pos: [0.70672, 0.823615],
+  time: 65820
+}, {
+  pos: [0.7634, 0.770575],
+  time: 66340
+}, {
+  pos: [0.760215, 0.785765],
+  time: 66830
+}, {
+  pos: [0.816965, 0.842015],
+  time: 67330
+}, {
+  pos: [0.777275, 0.84324],
+  time: 67820
+}, {
+  pos: [0.778575, 0.81659],
+  time: 68080
+}, {
+  pos: [0.74742, 0.814575],
+  time: 68390
+}, {
+  pos: [0.77642, 0.8052],
+  time: 68640
+}, {
+  pos: [0.77161, 0.78414],
+  time: 68900
+}, {
+  pos: [0.80455, 0.75201],
+  time: 69170
+}, {
+  pos: [0.81807, 0.76657],
+  time: 69430
+}, {
+  pos: [0.86175, 0.72861],
+  time: 69950
+}, {
+  pos: [0.85311, 0.70173],
+  time: 70430
+}, {
+  pos: [0.80262, 0.655575],
+  time: 70940
+}, {
+  pos: [0.74676, 0.69845],
+  time: 71430
+}, {
+  pos: [0.71426, 0.6397],
+  time: 71930
+}, {
+  pos: [0.755315, 0.60502],
+  time: 72440
+}, {
+  pos: [0.778805, 0.63634],
+  time: 72710
+}, {
+  pos: [0.77605, 0.616185],
+  time: 73000
+}, {
+  pos: [0.77787, 0.624025],
+  time: 73280
+}, {
+  pos: [0.79761, 0.597985],
+  time: 73560
+}, {
+  pos: [0.82995, 0.549475],
+  time: 74050
+}, {
+  pos: [0.809805, 0.56248],
+  time: 74560
+}, {
+  pos: [0.82524, 0.597025],
+  time: 75050
+}, {
+  pos: [0.839695, 0.56542],
+  time: 75540
+}, {
+  pos: [0.9, 0.56738],
+  time: 76100
+}, {
+  pos: [0.9, 0.51338],
+  time: 76600
+}, {
+  pos: [0.841975, 0.524105],
+  time: 77150
+}, {
+  pos: [0.830225, 0.503855],
+  time: 77650
+}, {
+  pos: [0.77853, 0.54918],
+  time: 78140
+}, {
+  pos: [0.799185, 0.593805],
+  time: 78650
+}, {
+  pos: [0.734705, 0.535305],
+  time: 79170
+}, {
+  pos: [0.691205, 0.503055],
+  time: 79670
+}, {
+  pos: [0.746015, 0.513855],
+  time: 80210
+}, {
+  pos: [0.72349, 0.55016],
+  time: 80740
+}, {
+  pos: [0.73375, 0.50075],
+  time: 81280
+}, {
+  pos: [0.71659, 0.56263],
+  time: 81800
+}, {
+  pos: [0.74575, 0.62554],
+  time: 82340
+}, {
+  pos: [0.754975, 0.68044],
+  time: 82790
+}, {
+  pos: [0.716475, 0.71294],
+  time: 83290
+}, {
+  pos: [0.75797, 0.72756],
+  time: 83720
+}, {
+  pos: [0.79857, 0.67751],
+  time: 84420
+}, {
+  pos: [0.80517, 0.64771],
+  time: 84820
+}, {
+  pos: [0.81107, 0.5952],
+  time: 85410
+}, {
+  pos: [0.85182, 0.6047],
+  time: 85910
+}, {
+  pos: [0.81896, 0.61583],
+  time: 86440
+}, {
+  pos: [0.87647, 0.60908],
+  time: 86980
+}, {
+  pos: [0.873285, 0.576005],
+  time: 87470
+}, {
+  pos: [0.88284, 0.530435],
+  time: 87960
+}, {
+  pos: [0.88041, 0.567965],
+  time: 88500
+}, {
+  pos: [0.89841, 0.567715],
+  time: 89000
+}, {
+  pos: [0.83847, 0.581215],
+  time: 89540
+}, {
+  pos: [0.89661, 0.585295],
+  time: 90050
+}, {
+  pos: [0.89511, 0.592795],
+  time: 90550
+}, {
+  pos: [0.87747, 0.613515],
+  time: 90830
+}, {
+  pos: [0.86505, 0.60231],
+  time: 91100
+}, {
+  pos: [0.87259, 0.59958],
+  time: 91360
+}, {
+  pos: [0.865165, 0.62577],
+  time: 91630
+}, {
+  pos: [0.866705, 0.64523],
+  time: 91910
+}, {
+  pos: [0.864625, 0.66993],
+  time: 92170
+}, {
+  pos: [0.887375, 0.664555],
+  time: 92420
+}, {
+  pos: [0.89642, 0.635125],
+  time: 92690
+}, {
+  pos: [0.9, 0.643375],
+  time: 92990
+}, {
+  pos: [0.9, 0.661855],
+  time: 93230
+}, {
+  pos: [0.896375, 0.630855],
+  time: 93480
+}, {
+  pos: [0.879815, 0.64592],
+  time: 93710
+}, {
+  pos: [0.86429, 0.65645],
+  time: 93980
+}, {
+  pos: [0.8912, 0.66438],
+  time: 94240
+}, {
+  pos: [0.88295, 0.655005],
+  time: 94490
+}, {
+  pos: [0.9, 0.630255],
+  time: 94740
+}, {
+  pos: [0.9, 0.624535],
+  time: 95000
+}, {
+  pos: [0.89246, 0.638835],
+  time: 95260
+}, {
+  pos: [0.9, 0.640525],
+  time: 95520
+}, {
+  pos: [0.9, 0.662395],
+  time: 95790
+}, {
+  pos: [0.88726, 0.682275],
+  time: 96070
+}, {
+  pos: [0.9, 0.691475],
+  time: 97220
+}, {
+  pos: [0.882175, 0.71984],
+  time: 97530
+}, {
+  pos: [0.847315, 0.72222],
+  time: 97810
+}, {
+  pos: [0.842275, 0.7337],
+  time: 98090
+}, {
+  pos: [0.862225, 0.7691],
+  time: 98390
+}, {
+  pos: [0.831025, 0.75446],
+  time: 98870
+}, {
+  pos: [0.818525, 0.72871],
+  time: 99370
+}, {
+  pos: [0.798245, 0.72351],
+  time: 99630
+}, {
+  pos: [0.783815, 0.70531],
+  time: 99890
+}, {
+  pos: [0.80774, 0.68791],
+  time: 100180
+}, {
+  pos: [0.79442, 0.68767],
+  time: 100420
+}, {
+  pos: [0.75892, 0.72842],
+  time: 100920
+}, {
+  pos: [0.729275, 0.75635],
+  time: 101410
+}, {
+  pos: [0.758435, 0.76904],
+  time: 101680
+}, {
+  pos: [0.780135, 0.76064],
+  time: 101960
+}, {
+  pos: [0.773135, 0.748765],
+  time: 102210
+}, {
+  pos: [0.737885, 0.718765],
+  time: 102510
+}, {
+  pos: [0.728885, 0.69664],
+  time: 102760
+}, {
+  pos: [0.764885, 0.71514],
+  time: 103260
+}, {
+  pos: [0.780365, 0.74106],
+  time: 103500
+}, {
+  pos: [0.724435, 0.756335],
+  time: 103970
+}, {
+  pos: [0.710155, 0.723435],
+  time: 104250
+}, {
+  pos: [0.599705, 0.759625],
+  time: 105190
+}, {
+  pos: [0.59248, 0.76651],
+  time: 105360
+}, {
+  pos: [0.58448, 0.759635],
+  time: 105610
+}, {
+  pos: [0.60378, 0.755135],
+  time: 105810
+}, {
+  pos: [0.64003, 0.72831],
+  time: 106100
+}, {
+  pos: [0.61312, 0.70278],
+  time: 106560
+}, {
+  pos: [0.60812, 0.70453],
+  time: 107060
+}, {
+  pos: [0.619145, 0.76529],
+  time: 107550
+}, {
+  pos: [0.593395, 0.79154],
+  time: 108050
+}, {
+  pos: [0.584145, 0.82804],
+  time: 108550
+}, {
+  pos: [0.61186, 0.82597],
+  time: 108780
+}, {
+  pos: [0.59911, 0.84082],
+  time: 109080
+}, {
+  pos: [0.59992, 0.85054],
+  time: 109350
+}, {
+  pos: [0.63096, 0.88846],
+  time: 109670
+}, {
+  pos: [0.597045, 0.9],
+  time: 110180
+}, {
+  pos: [0.547295, 0.9],
+  time: 110680
+}, {
+  pos: [0.59997, 0.84267],
+  time: 111170
+}, {
+  pos: [0.57622, 0.81417],
+  time: 111670
+}, {
+  pos: [0.5471, 0.87579],
+  time: 112190
+}, {
+  pos: [0.54435, 0.87129],
+  time: 112690
+}, {
+  pos: [0.578135, 0.867955],
+  time: 112980
+}, {
+  pos: [0.5516, 0.87448],
+  time: 113270
+}, {
+  pos: [0.56109, 0.89541],
+  time: 113530
+}, {
+  pos: [0.57129, 0.89256],
+  time: 113830
+}, {
+  pos: [0.63205, 0.9],
+  time: 114320
+}, {
+  pos: [0.6368, 0.9],
+  time: 114820
+}, {
+  pos: [0.65864, 0.84432],
+  time: 115300
+}, {
+  pos: [0.644105, 0.789495],
+  time: 115810
+}, {
+  pos: [0.682865, 0.80301],
+  time: 116320
+}, {
+  pos: [0.643265, 0.76269],
+  time: 116800
+}, {
+  pos: [0.62296, 0.781445],
+  time: 117110
+}, {
+  pos: [0.631225, 0.79928],
+  time: 117400
+}, {
+  pos: [0.610975, 0.777405],
+  time: 117650
+}, {
+  pos: [0.577825, 0.755655],
+  time: 117950
+}, {
+  pos: [0.560185, 0.69612],
+  time: 118440
+}, {
+  pos: [0.60037, 0.74359],
+  time: 118910
+}, {
+  pos: [0.65862, 0.70859],
+  time: 119410
+}, {
+  pos: [0.72336, 0.75955],
+  time: 119930
+}, {
+  pos: [0.74436, 0.81105],
+  time: 120430
+}, {
+  pos: [0.79961, 0.75305],
+  time: 120930
+}, {
+  pos: [0.80843, 0.77177],
+  time: 121290
+}, {
+  pos: [0.801805, 0.753395],
+  time: 121540
+}, {
+  pos: [0.82705, 0.72113],
+  time: 121810
+}, {
+  pos: [0.85227, 0.68915],
+  time: 122070
+}, {
+  pos: [0.83943, 0.71675],
+  time: 122310
+}, {
+  pos: [0.810285, 0.745605],
+  time: 122600
+}, {
+  pos: [0.814465, 0.736365],
+  time: 123040
+}, {
+  pos: [0.701575, 0.795725],
+  time: 124100
+}];
+module.exports = Beatmap;
+
+/***/ }),
+
+/***/ "./src/assets/beatmaps/beatmap7.js":
+/*!*****************************************!*\
+  !*** ./src/assets/beatmaps/beatmap7.js ***!
+  \*****************************************/
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/***/ ((module) => {
+
+//7 mononoke
+var Beatmap = [{
+  pos: [0.5, 0.5],
+  time: 1320
+}, {
+  pos: [0.43632, 0.48336],
+  time: 1960
+}, {
+  pos: [0.477945, 0.42981],
+  time: 2410
+}, {
+  pos: [0.474245, 0.42051],
+  time: 2610
+}, {
+  pos: [0.488865, 0.413415],
+  time: 3040
+}, {
+  pos: [0.463785, 0.396805],
+  time: 3260
+}, {
+  pos: [0.612505, 0.319065],
+  time: 4950
+}, {
+  pos: [0.662665, 0.265825],
+  time: 5390
+}, {
+  pos: [0.708115, 0.231175],
+  time: 5840
+}, {
+  pos: [0.719875, 0.254695],
+  time: 6050
+}, {
+  pos: [0.70246, 0.21191],
+  time: 6480
+}, {
+  pos: [0.70169, 0.18639],
+  time: 6700
+}, {
+  pos: [0.53403, 0.22042],
+  time: 8360
+}, {
+  pos: [0.52586, 0.27331],
+  time: 8790
+}, {
+  pos: [0.54544, 0.26539],
+  time: 9230
+}, {
+  pos: [0.5692, 0.26847],
+  time: 9670
+}, {
+  pos: [0.568985, 0.22977],
+  time: 10100
+}, {
+  pos: [0.560435, 0.22347],
+  time: 10550
+}, {
+  pos: [0.612795, 0.18673],
+  time: 10990
+}, {
+  pos: [0.583185, 0.17917],
+  time: 11410
+}, {
+  pos: [0.56878, 0.18218],
+  time: 11840
+}, {
+  pos: [0.524275, 0.188845],
+  time: 12270
+}, {
+  pos: [0.524705, 0.17358],
+  time: 12700
+}, {
+  pos: [0.470955, 0.189275],
+  time: 13130
+}, {
+  pos: [0.45741, 0.22948],
+  time: 13560
+}, {
+  pos: [0.49981, 0.21248],
+  time: 13960
+}, {
+  pos: [0.53017, 0.2295],
+  time: 14420
+}, {
+  pos: [0.50946, 0.19682],
+  time: 14800
+}, {
+  pos: [0.469685, 0.221545],
+  time: 15230
+}, {
+  pos: [0.495105, 0.185875],
+  time: 15640
+}, {
+  pos: [0.46608, 0.157065],
+  time: 16070
+}, {
+  pos: [0.4388, 0.163885],
+  time: 16510
+}, {
+  pos: [0.458365, 0.217635],
+  time: 16940
+}, {
+  pos: [0.41429, 0.23892],
+  time: 17370
+}, {
+  pos: [0.44243, 0.2238],
+  time: 17790
+}, {
+  pos: [0.415985, 0.20166],
+  time: 18200
+}, {
+  pos: [0.412835, 0.147435],
+  time: 18650
+}, {
+  pos: [0.39071, 0.158935],
+  time: 18900
+}, {
+  pos: [0.37327, 0.174135],
+  time: 19060
+}, {
+  pos: [0.39758, 0.141765],
+  time: 19320
+}, {
+  pos: [0.392395, 0.12264],
+  time: 19490
+}, {
+  pos: [0.461425, 0.1],
+  time: 20080
+}, {
+  pos: [0.480055, 0.12576],
+  time: 20310
+}, {
+  pos: [0.50076, 0.1],
+  time: 20720
+}, {
+  pos: [0.47178, 0.14347],
+  time: 21180
+}, {
+  pos: [0.42453, 0.10483],
+  time: 21600
+}, {
+  pos: [0.43333, 0.11571],
+  time: 21760
+}, {
+  pos: [0.40369, 0.11103],
+  time: 22020
+}, {
+  pos: [0.44309, 0.12083],
+  time: 22420
+}, {
+  pos: [0.45479, 0.11561],
+  time: 22600
+}, {
+  pos: [0.445935, 0.10871],
+  time: 22830
+}, {
+  pos: [0.469735, 0.11011],
+  time: 23390
+}, {
+  pos: [0.467785, 0.1],
+  time: 23650
+}, {
+  pos: [0.439945, 0.13072],
+  time: 24130
+}, {
+  pos: [0.416725, 0.13029],
+  time: 24560
+}, {
+  pos: [0.323125, 0.1],
+  time: 25360
+}, {
+  pos: [0.30645, 0.1],
+  time: 25590
+}, {
+  pos: [0.29325, 0.1],
+  time: 25790
+}, {
+  pos: [0.27585, 0.1],
+  time: 26030
+}, {
+  pos: [0.30549, 0.1],
+  time: 26290
+}, {
+  pos: [0.304125, 0.11326],
+  time: 26680
+}, {
+  pos: [0.265485, 0.1],
+  time: 27100
+}, {
+  pos: [0.31407, 0.126855],
+  time: 27510
+}, {
+  pos: [0.343525, 0.1232],
+  time: 27940
+}, {
+  pos: [0.35148, 0.10041],
+  time: 28370
+}, {
+  pos: [0.40136, 0.1],
+  time: 28800
+}, {
+  pos: [0.383785, 0.106175],
+  time: 28990
+}, {
+  pos: [0.410465, 0.121355],
+  time: 29220
+}, {
+  pos: [0.411845, 0.138375],
+  time: 29450
+}, {
+  pos: [0.436685, 0.139065],
+  time: 29680
+}, {
+  pos: [0.400845, 0.130105],
+  time: 30240
+}, {
+  pos: [0.400595, 0.12473],
+  time: 30490
+}, {
+  pos: [0.424955, 0.11171],
+  time: 30910
+}, {
+  pos: [0.415495, 0.120095],
+  time: 31340
+}, {
+  pos: [0.388215, 0.144515],
+  time: 31780
+}, {
+  pos: [0.37437, 0.106685],
+  time: 32170
+}, {
+  pos: [0.38217, 0.106985],
+  time: 32370
+}, {
+  pos: [0.3765, 0.1],
+  time: 32580
+}, {
+  pos: [0.355695, 0.11501],
+  time: 32770
+}, {
+  pos: [0.38557, 0.1],
+  time: 33020
+}, {
+  pos: [0.394735, 0.1],
+  time: 33410
+}, {
+  pos: [0.414535, 0.1],
+  time: 33610
+}, {
+  pos: [0.435815, 0.1],
+  time: 33800
+}, {
+  pos: [0.479915, 0.124525],
+  time: 34250
+}, {
+  pos: [0.466495, 0.163025],
+  time: 34690
+}, {
+  pos: [0.459085, 0.177455],
+  time: 35080
+}, {
+  pos: [0.459885, 0.201155],
+  time: 35280
+}, {
+  pos: [0.489135, 0.216235],
+  time: 35540
+}, {
+  pos: [0.45203, 0.20865],
+  time: 35950
+}, {
+  pos: [0.47917, 0.26592],
+  time: 36410
+}, {
+  pos: [0.44004, 0.233025],
+  time: 36840
+}, {
+  pos: [0.4623, 0.226095],
+  time: 37260
+}, {
+  pos: [0.4747, 0.222295],
+  time: 37660
+}, {
+  pos: [0.48834, 0.248695],
+  time: 38100
+}, {
+  pos: [0.47091, 0.214255],
+  time: 38520
+}, {
+  pos: [0.44531, 0.242855],
+  time: 38920
+}, {
+  pos: [0.452975, 0.24821],
+  time: 39130
+}, {
+  pos: [0.454875, 0.24221],
+  time: 39330
+}, {
+  pos: [0.454985, 0.22208],
+  time: 39550
+}, {
+  pos: [0.448745, 0.25028],
+  time: 39790
+}, {
+  pos: [0.426645, 0.22648],
+  time: 40130
+}, {
+  pos: [0.396385, 0.23362],
+  time: 40470
+}, {
+  pos: [0.381345, 0.24826],
+  time: 40630
+}, {
+  pos: [0.40299, 0.23346],
+  time: 41000
+}, {
+  pos: [0.39339, 0.25818],
+  time: 41480
+}, {
+  pos: [0.39831, 0.268635],
+  time: 41890
+}, {
+  pos: [0.348495, 0.31968],
+  time: 42300
+}, {
+  pos: [0.333795, 0.30908],
+  time: 42500
+}, {
+  pos: [0.346875, 0.30452],
+  time: 42740
+}, {
+  pos: [0.351055, 0.2845],
+  time: 42960
+}, {
+  pos: [0.347285, 0.27228],
+  time: 43220
+}, {
+  pos: [0.415045, 0.29916],
+  time: 43780
+}, {
+  pos: [0.445345, 0.31761],
+  time: 44080
+}, {
+  pos: [0.404545, 0.27441],
+  time: 44560
+}, {
+  pos: [0.394645, 0.329535],
+  time: 45010
+}, {
+  pos: [0.344765, 0.238805],
+  time: 45870
+}, {
+  pos: [0.312425, 0.202055],
+  time: 46360
+}, {
+  pos: [0.332205, 0.201595],
+  time: 46820
+}, {
+  pos: [0.33738, 0.17752],
+  time: 47270
+}, {
+  pos: [0.34122, 0.18172],
+  time: 47510
+}, {
+  pos: [0.35574, 0.202],
+  time: 47750
+}, {
+  pos: [0.35094, 0.1805],
+  time: 47950
+}, {
+  pos: [0.34098, 0.1757],
+  time: 48190
+}, {
+  pos: [0.35506, 0.16338],
+  time: 48410
+}, {
+  pos: [0.34858, 0.17874],
+  time: 48650
+}, {
+  pos: [0.26664, 0.1835],
+  time: 49330
+}, {
+  pos: [0.25608, 0.15974],
+  time: 49550
+}, {
+  pos: [0.24151, 0.14376],
+  time: 50020
+}, {
+  pos: [0.209335, 0.14415],
+  time: 50410
+}, {
+  pos: [0.241635, 0.20571],
+  time: 51170
+}, {
+  pos: [0.242355, 0.20175],
+  time: 51350
+}, {
+  pos: [0.243435, 0.23001],
+  time: 51710
+}, {
+  pos: [0.249175, 0.21419],
+  time: 51990
+}, {
+  pos: [0.242215, 0.247685],
+  time: 52280
+}, {
+  pos: [0.178575, 0.380145],
+  time: 53760
+}, {
+  pos: [0.1677, 0.366495],
+  time: 53910
+}, {
+  pos: [0.195825, 0.376245],
+  time: 54160
+}, {
+  pos: [0.175485, 0.341145],
+  time: 54520
+}, {
+  pos: [0.124185, 0.35667],
+  time: 54970
+}, {
+  pos: [0.11763, 0.37093],
+  time: 55200
+}, {
+  pos: [0.11395, 0.35115],
+  time: 55660
+}, {
+  pos: [0.11579, 0.337695],
+  time: 55890
+}, {
+  pos: [0.10733, 0.41031],
+  time: 57300
+}, {
+  pos: [0.1, 0.39671],
+  time: 57500
+}, {
+  pos: [0.1, 0.38711],
+  time: 57700
+}, {
+  pos: [0.1, 0.37259],
+  time: 58140
+}, {
+  pos: [0.13212, 0.36951],
+  time: 58580
+}, {
+  pos: [0.1086, 0.39156],
+  time: 58790
+}, {
+  pos: [0.1, 0.42228],
+  time: 59270
+}, {
+  pos: [0.1, 0.43033],
+  time: 59500
+}, {
+  pos: [0.1, 0.474185],
+  time: 59990
+}, {
+  pos: [0.1, 0.473525],
+  time: 60430
+}, {
+  pos: [0.10405, 0.427175],
+  time: 60880
+}, {
+  pos: [0.1, 0.3788],
+  time: 61310
+}, {
+  pos: [0.115695, 0.35429],
+  time: 61740
+}, {
+  pos: [0.147285, 0.35312],
+  time: 62130
+}, {
+  pos: [0.139585, 0.37302],
+  time: 62330
+}, {
+  pos: [0.131665, 0.36092],
+  time: 62770
+}, {
+  pos: [0.149605, 0.38921],
+  time: 63000
+}, {
+  pos: [0.190765, 0.38039],
+  time: 63840
+}, {
+  pos: [0.194455, 0.35046],
+  time: 64250
+}, {
+  pos: [0.22582, 0.308025],
+  time: 64660
+}, {
+  pos: [0.20671, 0.337635],
+  time: 65080
+}, {
+  pos: [0.24311, 0.302435],
+  time: 65480
+}, {
+  pos: [0.22381, 0.323635],
+  time: 65680
+}, {
+  pos: [0.16631, 0.311445],
+  time: 66140
+}, {
+  pos: [0.170395, 0.3294],
+  time: 66330
+}, {
+  pos: [0.16588, 0.365735],
+  time: 66760
+}, {
+  pos: [0.124705, 0.33716],
+  time: 67210
+}, {
+  pos: [0.109965, 0.3849],
+  time: 67650
+}, {
+  pos: [0.1, 0.41027],
+  time: 68080
+}, {
+  pos: [0.1, 0.439475],
+  time: 68410
+}, {
+  pos: [0.1, 0.410675],
+  time: 68860
+}, {
+  pos: [0.1176, 0.425855],
+  time: 69300
+}, {
+  pos: [0.165975, 0.440475],
+  time: 69730
+}, {
+  pos: [0.14631, 0.46336],
+  time: 69960
+}, {
+  pos: [0.1543, 0.45877],
+  time: 70130
+}, {
+  pos: [0.166425, 0.45077],
+  time: 70380
+}, {
+  pos: [0.188325, 0.46267],
+  time: 70580
+}, {
+  pos: [0.194765, 0.51028],
+  time: 71040
+}, {
+  pos: [0.245595, 0.49096],
+  time: 71500
+}, {
+  pos: [0.245195, 0.49696],
+  time: 71900
+}, {
+  pos: [0.218195, 0.51716],
+  time: 72300
+}, {
+  pos: [0.205715, 0.532955],
+  time: 72690
+}, {
+  pos: [0.23626, 0.578055],
+  time: 73100
+}, {
+  pos: [0.25328, 0.585415],
+  time: 73560
+}, {
+  pos: [0.20985, 0.59122],
+  time: 73990
+}, {
+  pos: [0.22834, 0.644325],
+  time: 74420
+}, {
+  pos: [0.22314, 0.680525],
+  time: 74820
+}, {
+  pos: [0.22724, 0.691825],
+  time: 75020
+}, {
+  pos: [0.20519, 0.685],
+  time: 75230
+}, {
+  pos: [0.192195, 0.664415],
+  time: 75460
+}, {
+  pos: [0.165975, 0.66913],
+  time: 75690
+}, {
+  pos: [0.163005, 0.67102],
+  time: 76230
+}, {
+  pos: [0.136035, 0.68291],
+  time: 76520
+}, {
+  pos: [0.101715, 0.66289],
+  time: 76960
+}, {
+  pos: [0.1, 0.63748],
+  time: 77380
+}, {
+  pos: [0.13362, 0.610215],
+  time: 77790
+}, {
+  pos: [0.17582, 0.618415],
+  time: 78190
+}, {
+  pos: [0.19364, 0.595755],
+  time: 78410
+}, {
+  pos: [0.18812, 0.596075],
+  time: 78570
+}, {
+  pos: [0.18968, 0.622115],
+  time: 78810
+}, {
+  pos: [0.18485, 0.63603],
+  time: 79040
+}, {
+  pos: [0.25955, 0.65913],
+  time: 79640
+}, {
+  pos: [0.24911, 0.68397],
+  time: 79880
+}, {
+  pos: [0.26158, 0.72353],
+  time: 80310
+}, {
+  pos: [0.29488, 0.76763],
+  time: 80760
+}, {
+  pos: [0.345835, 0.76376],
+  time: 81190
+}, {
+  pos: [0.331035, 0.77376],
+  time: 81590
+}, {
+  pos: [0.368475, 0.814905],
+  time: 81980
+}, {
+  pos: [0.362245, 0.814975],
+  time: 82120
+}, {
+  pos: [0.335465, 0.821215],
+  time: 82380
+}, {
+  pos: [0.26648, 0.772705],
+  time: 83010
+}, {
+  pos: [0.25668, 0.764905],
+  time: 83210
+}, {
+  pos: [0.27714, 0.811765],
+  time: 83650
+}, {
+  pos: [0.28924, 0.857305],
+  time: 84090
+}, {
+  pos: [0.27709, 0.83098],
+  time: 84540
+}, {
+  pos: [0.30965, 0.7993],
+  time: 84980
+}, {
+  pos: [0.29138, 0.78094],
+  time: 85160
+}, {
+  pos: [0.30978, 0.766795],
+  time: 85390
+}, {
+  pos: [0.29298, 0.782195],
+  time: 85590
+}, {
+  pos: [0.28838, 0.79289],
+  time: 85820
+}, {
+  pos: [0.271395, 0.741935],
+  time: 86250
+}, {
+  pos: [0.244995, 0.729615],
+  time: 86690
+}, {
+  pos: [0.207995, 0.732015],
+  time: 87090
+}, {
+  pos: [0.224495, 0.693295],
+  time: 87530
+}, {
+  pos: [0.270095, 0.655895],
+  time: 87930
+}, {
+  pos: [0.296745, 0.604645],
+  time: 88340
+}, {
+  pos: [0.314445, 0.605345],
+  time: 88540
+}, {
+  pos: [0.295755, 0.62267],
+  time: 88750
+}, {
+  pos: [0.319455, 0.63057],
+  time: 88950
+}, {
+  pos: [0.335055, 0.60357],
+  time: 89190
+}, {
+  pos: [0.353935, 0.546045],
+  time: 89780
+}, {
+  pos: [0.350335, 0.533565],
+  time: 90020
+}, {
+  pos: [0.317485, 0.58509],
+  time: 90470
+}, {
+  pos: [0.347155, 0.595195],
+  time: 90900
+}, {
+  pos: [0.297955, 0.557195],
+  time: 91300
+}, {
+  pos: [0.32741, 0.598045],
+  time: 91730
+}, {
+  pos: [0.30861, 0.600765],
+  time: 91890
+}, {
+  pos: [0.285985, 0.623265],
+  time: 92140
+}, {
+  pos: [0.27536, 0.617315],
+  time: 92310
+}, {
+  pos: [0.263735, 0.63994],
+  time: 92560
+}, {
+  pos: [0.200805, 0.68025],
+  time: 93140
+}, {
+  pos: [0.22346, 0.70256],
+  time: 93370
+}, {
+  pos: [0.20046, 0.67887],
+  time: 93830
+}, {
+  pos: [0.21674, 0.69449],
+  time: 94270
+}, {
+  pos: [0.217325, 0.72257],
+  time: 94660
+}, {
+  pos: [0.21381, 0.70718],
+  time: 94850
+}, {
+  pos: [0.22931, 0.722055],
+  time: 95100
+}, {
+  pos: [0.28057, 0.697415],
+  time: 95540
+}, {
+  pos: [0.32056, 0.72601],
+  time: 95970
+}, {
+  pos: [0.33841, 0.70375],
+  time: 96390
+}, {
+  pos: [0.28552, 0.754275],
+  time: 96820
+}, {
+  pos: [0.304655, 0.80308],
+  time: 97250
+}, {
+  pos: [0.3475, 0.79488],
+  time: 97660
+}, {
+  pos: [0.36994, 0.79598],
+  time: 98100
+}, {
+  pos: [0.361555, 0.806945],
+  time: 98530
+}, {
+  pos: [0.35405, 0.79982],
+  time: 98720
+}, {
+  pos: [0.35865, 0.79422],
+  time: 98920
+}, {
+  pos: [0.34145, 0.78342],
+  time: 99120
+}, {
+  pos: [0.338115, 0.76111],
+  time: 99350
+}, {
+  pos: [0.322115, 0.76271],
+  time: 99670
+}, {
+  pos: [0.289115, 0.722285],
+  time: 100000
+}, {
+  pos: [0.286585, 0.742065],
+  time: 100230
+}, {
+  pos: [0.276985, 0.703665],
+  time: 100630
+}, {
+  pos: [0.227785, 0.65508],
+  time: 101040
+}, {
+  pos: [0.271, 0.65164],
+  time: 101470
+}, {
+  pos: [0.235095, 0.699155],
+  time: 101900
+}, {
+  pos: [0.228165, 0.681725],
+  time: 102110
+}, {
+  pos: [0.220795, 0.666875],
+  time: 102330
+}, {
+  pos: [0.22988, 0.67412],
+  time: 102560
+}, {
+  pos: [0.25127, 0.69091],
+  time: 102790
+}, {
+  pos: [0.2094, 0.63314],
+  time: 103320
+}, {
+  pos: [0.20615, 0.64964],
+  time: 103570
+}, {
+  pos: [0.21759, 0.66724],
+  time: 104010
+}, {
+  pos: [0.20615, 0.71762],
+  time: 104450
+}, {
+  pos: [0.17458, 0.65833],
+  time: 105220
+}, {
+  pos: [0.20194, 0.70657],
+  time: 105700
+}, {
+  pos: [0.2004, 0.68369],
+  time: 106140
+}, {
+  pos: [0.2082, 0.67209],
+  time: 106540
+}, {
+  pos: [0.1906, 0.67259],
+  time: 106740
+}, {
+  pos: [0.19132, 0.67499],
+  time: 106980
+}, {
+  pos: [0.18822, 0.670289999999999],
+  time: 107180
+}, {
+  pos: [0.1881, 0.69309],
+  time: 107420
+}, {
+  pos: [0.2129, 0.69019],
+  time: 107620
+}, {
+  pos: [0.18639, 0.705589999999999],
+  time: 107840
+}, {
+  pos: [0.13683, 0.725189999999999],
+  time: 108400
+}, {
+  pos: [0.12713, 0.711189999999999],
+  time: 108600
+}, {
+  pos: [0.16563, 0.712939999999999],
+  time: 109100
+}, {
+  pos: [0.15243, 0.726339999999999],
+  time: 109500
+}, {
+  pos: [0.18918, 0.682869999999999],
+  time: 109920
+}, {
+  pos: [0.183375, 0.718344999999999],
+  time: 110350
+}, {
+  pos: [0.202375, 0.740954999999999],
+  time: 110730
+}, {
+  pos: [0.184775, 0.713675],
+  time: 111170
+}, {
+  pos: [0.178395, 0.664615],
+  time: 111610
+}, {
+  pos: [0.199095, 0.657864999999999],
+  time: 112060
+}, {
+  pos: [0.196635, 0.689229999999999],
+  time: 112470
+}, {
+  pos: [0.166605, 0.669729999999999],
+  time: 112860
+}, {
+  pos: [0.163745, 0.66511],
+  time: 113300
+}, {
+  pos: [0.151425, 0.670829999999999],
+  time: 113740
+}, {
+  pos: [0.151125, 0.67243],
+  time: 113940
+}, {
+  pos: [0.145245, 0.64828],
+  time: 114360
+}, {
+  pos: [0.157845, 0.64378],
+  time: 114560
+}, {
+  pos: [0.160835, 0.65183],
+  time: 115020
+}, {
+  pos: [0.19416, 0.689455],
+  time: 115450
+}, {
+  pos: [0.15496, 0.660055],
+  time: 115850
+}, {
+  pos: [0.17281, 0.628765],
+  time: 116270
+}, {
+  pos: [0.21968, 0.5834],
+  time: 116700
+}, {
+  pos: [0.255145, 0.576225],
+  time: 117110
+}, {
+  pos: [0.259845, 0.592125],
+  time: 117310
+}, {
+  pos: [0.219595, 0.605465],
+  time: 117770
+}, {
+  pos: [0.231495, 0.610565],
+  time: 117970
+}, {
+  pos: [0.236745, 0.575075],
+  time: 118390
+}, {
+  pos: [0.290745, 0.56945],
+  time: 118840
+}, {
+  pos: [0.255545, 0.57885],
+  time: 119240
+}, {
+  pos: [0.217585, 0.539069999999999],
+  time: 119760
+}];
+module.exports = Beatmap;
+
+/***/ }),
+
+/***/ "./src/assets/beatmaps/beatmap8.js":
+/*!*****************************************!*\
+  !*** ./src/assets/beatmaps/beatmap8.js ***!
+  \*****************************************/
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/***/ ((module) => {
+
+//8 polygon
+var Beatmap = [{
+  pos: [0.5, 0.5],
+  time: 1280
+}, {
+  pos: [0.536815, 0.478355],
+  time: 1650
+}, {
+  pos: [0.509805, 0.453195],
+  time: 2020
+}, {
+  pos: [0.457665, 0.414695],
+  time: 2460
+}, {
+  pos: [0.405205, 0.44501],
+  time: 2890
+}, {
+  pos: [0.363405, 0.48054],
+  time: 3270
+}, {
+  pos: [0.375985, 0.47499],
+  time: 3640
+}, {
+  pos: [0.334045, 0.44097],
+  time: 4000
+}, {
+  pos: [0.338875, 0.446375],
+  time: 4230
+}, {
+  pos: [0.351835, 0.429905],
+  time: 4500
+}, {
+  pos: [0.373585, 0.427655],
+  time: 4800
+}, {
+  pos: [0.337485, 0.421765],
+  time: 5180
+}, {
+  pos: [0.30756, 0.418615],
+  time: 5530
+}, {
+  pos: [0.30906, 0.442015],
+  time: 5830
+}, {
+  pos: [0.333355, 0.47018],
+  time: 6260
+}, {
+  pos: [0.370975, 0.49013],
+  time: 6640
+}, {
+  pos: [0.368225, 0.50663],
+  time: 6890
+}, {
+  pos: [0.343865, 0.53389],
+  time: 7180
+}, {
+  pos: [0.321785, 0.52837],
+  time: 7640
+}, {
+  pos: [0.311245, 0.49743],
+  time: 7980
+}, {
+  pos: [0.315445, 0.49113],
+  time: 8260
+}, {
+  pos: [0.314275, 0.50218],
+  time: 8520
+}, {
+  pos: [0.25376, 0.53109],
+  time: 9010
+}, {
+  pos: [0.21452, 0.55359],
+  time: 9370
+}, {
+  pos: [0.24672, 0.53301],
+  time: 9650
+}, {
+  pos: [0.24238, 0.56255],
+  time: 9930
+}, {
+  pos: [0.286705, 0.5594],
+  time: 10380
+}, {
+  pos: [0.247095, 0.58167],
+  time: 10720
+}, {
+  pos: [0.25922, 0.555045],
+  time: 10970
+}, {
+  pos: [0.29267, 0.575745],
+  time: 11270
+}, {
+  pos: [0.32839, 0.61969],
+  time: 11740
+}, {
+  pos: [0.31756, 0.62786],
+  time: 12120
+}, {
+  pos: [0.293935, 0.648485],
+  time: 12370
+}, {
+  pos: [0.265515, 0.662485],
+  time: 12650
+}, {
+  pos: [0.266835, 0.711325],
+  time: 13090
+}, {
+  pos: [0.234635, 0.739325],
+  time: 13440
+}, {
+  pos: [0.211685, 0.762575],
+  time: 13740
+}, {
+  pos: [0.200435, 0.77545],
+  time: 13990
+}, {
+  pos: [0.154415, 0.73021],
+  time: 14380
+}, {
+  pos: [0.111075, 0.78103],
+  time: 14820
+}, {
+  pos: [0.128355, 0.74391],
+  time: 15140
+}, {
+  pos: [0.13116, 0.70761],
+  time: 15470
+}, {
+  pos: [0.12828, 0.70417],
+  time: 15630
+}, {
+  pos: [0.14644, 0.69649],
+  time: 15790
+}, {
+  pos: [0.13804, 0.71509],
+  time: 15940
+}, {
+  pos: [0.15064, 0.728065],
+  time: 16090
+}, {
+  pos: [0.15109, 0.745255],
+  time: 16270
+}, {
+  pos: [0.16585, 0.762415],
+  time: 16510
+}, {
+  pos: [0.17707, 0.74584],
+  time: 16680
+}, {
+  pos: [0.13843, 0.77275],
+  time: 17140
+}, {
+  pos: [0.12721, 0.77989],
+  time: 17480
+}, {
+  pos: [0.15594, 0.75592],
+  time: 17820
+}, {
+  pos: [0.179215, 0.773945],
+  time: 18170
+}, {
+  pos: [0.193135, 0.755465],
+  time: 18330
+}, {
+  pos: [0.198575, 0.763225],
+  time: 18490
+}, {
+  pos: [0.186165, 0.7458],
+  time: 18660
+}, {
+  pos: [0.184075, 0.72243],
+  time: 18850
+}, {
+  pos: [0.180875, 0.73843],
+  time: 19010
+}, {
+  pos: [0.199325, 0.71629],
+  time: 19190
+}, {
+  pos: [0.20075, 0.714675],
+  time: 19380
+}, {
+  pos: [0.23375, 0.706675],
+  time: 19780
+}, {
+  pos: [0.27555, 0.658275],
+  time: 20180
+}, {
+  pos: [0.31514, 0.696385],
+  time: 20550
+}, {
+  pos: [0.281815, 0.727385],
+  time: 20860
+}, {
+  pos: [0.268725, 0.712255],
+  time: 21030
+}, {
+  pos: [0.277765, 0.725215],
+  time: 21190
+}, {
+  pos: [0.28006, 0.739325],
+  time: 21360
+}, {
+  pos: [0.293065, 0.73329],
+  time: 21530
+}, {
+  pos: [0.278935, 0.75219],
+  time: 21710
+}, {
+  pos: [0.262595, 0.757605],
+  time: 21900
+}, {
+  pos: [0.241265, 0.771015],
+  time: 22080
+}, {
+  pos: [0.201885, 0.728775],
+  time: 22520
+}, {
+  pos: [0.210625, 0.760884999999999],
+  time: 22900
+}, {
+  pos: [0.185635, 0.790974999999999],
+  time: 23240
+}, {
+  pos: [0.161485, 0.764724999999999],
+  time: 23590
+}, {
+  pos: [0.176045, 0.770084999999999],
+  time: 23750
+}, {
+  pos: [0.17987, 0.777735],
+  time: 23920
+}, {
+  pos: [0.16087, 0.769564999999999],
+  time: 24110
+}, {
+  pos: [0.1812, 0.783149999999999],
+  time: 24300
+}, {
+  pos: [0.17574, 0.769759999999999],
+  time: 24560
+}, {
+  pos: [0.14454, 0.745959999999999],
+  time: 24960
+}, {
+  pos: [0.15114, 0.765759999999999],
+  time: 25290
+}, {
+  pos: [0.183845, 0.752429999999999],
+  time: 25600
+}, {
+  pos: [0.190305, 0.73815],
+  time: 25940
+}, {
+  pos: [0.21813, 0.738499999999999],
+  time: 26290
+}, {
+  pos: [0.19688, 0.730849999999999],
+  time: 26630
+}, {
+  pos: [0.220805, 0.742399999999999],
+  time: 26960
+}, {
+  pos: [0.181705, 0.750219999999999],
+  time: 27300
+}, {
+  pos: [0.221635, 0.739329999999999],
+  time: 27630
+}, {
+  pos: [0.196615, 0.73969],
+  time: 27990
+}, {
+  pos: [0.226645, 0.756025],
+  time: 28320
+}, {
+  pos: [0.199285, 0.793105],
+  time: 28680
+}, {
+  pos: [0.230905, 0.789025],
+  time: 29020
+}, {
+  pos: [0.21148, 0.76505],
+  time: 29370
+}, {
+  pos: [0.20719, 0.748715],
+  time: 29700
+}, {
+  pos: [0.223855, 0.71588],
+  time: 30030
+}, {
+  pos: [0.193765, 0.72574],
+  time: 30370
+}, {
+  pos: [0.201285, 0.73694],
+  time: 30690
+}, {
+  pos: [0.163205, 0.69852],
+  time: 31030
+}, {
+  pos: [0.143485, 0.69427],
+  time: 31370
+}, {
+  pos: [0.161675, 0.65211],
+  time: 31710
+}, {
+  pos: [0.142465, 0.63766],
+  time: 32050
+}, {
+  pos: [0.12019, 0.668845],
+  time: 32380
+}, {
+  pos: [0.144165, 0.676895],
+  time: 32730
+}, {
+  pos: [0.140535, 0.652475],
+  time: 33060
+}, {
+  pos: [0.182695, 0.688685],
+  time: 33400
+}, {
+  pos: [0.17307, 0.67276],
+  time: 33750
+}, {
+  pos: [0.154425, 0.67738],
+  time: 34080
+}, {
+  pos: [0.159825, 0.71356],
+  time: 34440
+}, {
+  pos: [0.17734, 0.67636],
+  time: 34750
+}, {
+  pos: [0.13155, 0.63988],
+  time: 35130
+}, {
+  pos: [0.132045, 0.6412],
+  time: 35460
+}, {
+  pos: [0.145765, 0.64722],
+  time: 35740
+}, {
+  pos: [0.156985, 0.68451],
+  time: 36070
+}, {
+  pos: [0.134385, 0.68591],
+  time: 36470
+}, {
+  pos: [0.101745, 0.65695],
+  time: 36790
+}, {
+  pos: [0.1, 0.681275],
+  time: 37140
+}, {
+  pos: [0.10592, 0.67332],
+  time: 37510
+}, {
+  pos: [0.14512, 0.65197],
+  time: 37860
+}, {
+  pos: [0.10887, 0.666325],
+  time: 38150
+}, {
+  pos: [0.14775, 0.667585],
+  time: 38510
+}, {
+  pos: [0.17811, 0.684415],
+  time: 38840
+}, {
+  pos: [0.19863, 0.649495],
+  time: 39200
+}, {
+  pos: [0.19518, 0.651745],
+  time: 39500
+}, {
+  pos: [0.23298, 0.659485],
+  time: 39860
+}, {
+  pos: [0.23568, 0.614845],
+  time: 40220
+}, {
+  pos: [0.214155, 0.57757],
+  time: 40570
+}, {
+  pos: [0.210555, 0.56827],
+  time: 40870
+}, {
+  pos: [0.23208, 0.548495],
+  time: 41220
+}, {
+  pos: [0.19995, 0.559885],
+  time: 41560
+}, {
+  pos: [0.20121, 0.518845],
+  time: 41920
+}, {
+  pos: [0.17945, 0.535645],
+  time: 42240
+}, {
+  pos: [0.203315, 0.570055],
+  time: 42610
+}, {
+  pos: [0.215385, 0.584335],
+  time: 42950
+}, {
+  pos: [0.22149, 0.56833],
+  time: 43280
+}, {
+  pos: [0.217115, 0.57148],
+  time: 43630
+}, {
+  pos: [0.201995, 0.52684],
+  time: 43990
+}, {
+  pos: [0.203315, 0.55687],
+  time: 44320
+}, {
+  pos: [0.17873, 0.5242],
+  time: 44650
+}, {
+  pos: [0.16118, 0.54175],
+  time: 44950
+}, {
+  pos: [0.18638, 0.521975],
+  time: 45300
+}, {
+  pos: [0.21368, 0.4987],
+  time: 45650
+}, {
+  pos: [0.21467, 0.48451],
+  time: 45980
+}, {
+  pos: [0.24008, 0.474445],
+  time: 46310
+}, {
+  pos: [0.262555, 0.459565],
+  time: 46620
+}, {
+  pos: [0.301405, 0.447725],
+  time: 46990
+}, {
+  pos: [0.25714, 0.44363],
+  time: 47380
+}, {
+  pos: [0.282865, 0.476005],
+  time: 47730
+}, {
+  pos: [0.282865, 0.509665],
+  time: 48070
+}, {
+  pos: [0.271825, 0.526785],
+  time: 48390
+}, {
+  pos: [0.314325, 0.547525],
+  time: 48730
+}, {
+  pos: [0.313815, 0.552965],
+  time: 49070
+}, {
+  pos: [0.30474, 0.529205],
+  time: 49400
+}, {
+  pos: [0.33908, 0.555215],
+  time: 49740
+}, {
+  pos: [0.33464, 0.573715],
+  time: 50110
+}, {
+  pos: [0.30523, 0.565215],
+  time: 50450
+}, {
+  pos: [0.27784, 0.59409],
+  time: 50780
+}, {
+  pos: [0.298135, 0.62775],
+  time: 51110
+}, {
+  pos: [0.275865, 0.61772],
+  time: 51450
+}, {
+  pos: [0.298585, 0.63884],
+  time: 51770
+}, {
+  pos: [0.332785, 0.64316],
+  time: 52130
+}, {
+  pos: [0.331135, 0.64778],
+  time: 52460
+}, {
+  pos: [0.303055, 0.6152],
+  time: 52820
+}, {
+  pos: [0.280445, 0.59208],
+  time: 53160
+}, {
+  pos: [0.253715, 0.587625],
+  time: 53490
+}, {
+  pos: [0.217715, 0.585645],
+  time: 53850
+}, {
+  pos: [0.229615, 0.578505],
+  time: 54190
+}, {
+  pos: [0.21889, 0.542865],
+  time: 54520
+}, {
+  pos: [0.25381, 0.525765],
+  time: 54880
+}, {
+  pos: [0.26767, 0.533355],
+  time: 55210
+}, {
+  pos: [0.254965, 0.50415],
+  time: 55540
+}, {
+  pos: [0.261565, 0.51075],
+  time: 55870
+}, {
+  pos: [0.281545, 0.50211],
+  time: 56230
+}, {
+  pos: [0.30283, 0.517455],
+  time: 56560
+}, {
+  pos: [0.28158, 0.527145],
+  time: 56900
+}, {
+  pos: [0.27801, 0.520175],
+  time: 57240
+}, {
+  pos: [0.29601, 0.484475],
+  time: 57540
+}, {
+  pos: [0.282975, 0.49883],
+  time: 57870
+}, {
+  pos: [0.25489, 0.466235],
+  time: 58280
+}, {
+  pos: [0.236905, 0.452705],
+  time: 58610
+}, {
+  pos: [0.212425, 0.465665],
+  time: 58970
+}, {
+  pos: [0.183785, 0.489825],
+  time: 59290
+}, {
+  pos: [0.154545, 0.496285],
+  time: 59630
+}, {
+  pos: [0.14632, 0.460235],
+  time: 59980
+}, {
+  pos: [0.16697, 0.46741],
+  time: 60330
+}, {
+  pos: [0.1607, 0.45784],
+  time: 60660
+}, {
+  pos: [0.16274, 0.42112],
+  time: 61000
+}, {
+  pos: [0.152765, 0.411145],
+  time: 61350
+}, {
+  pos: [0.126075, 0.434435],
+  time: 61690
+}, {
+  pos: [0.1, 0.40952],
+  time: 62020
+}, {
+  pos: [0.1, 0.36957],
+  time: 62360
+}, {
+  pos: [0.1, 0.38042],
+  time: 62710
+}, {
+  pos: [0.1, 0.39547],
+  time: 63060
+}, {
+  pos: [0.1, 0.38845],
+  time: 63420
+}, {
+  pos: [0.12745, 0.385],
+  time: 63720
+}, {
+  pos: [0.11453, 0.41373],
+  time: 64060
+}, {
+  pos: [0.13782, 0.44603],
+  time: 64400
+}, {
+  pos: [0.1, 0.46088],
+  time: 64730
+}, {
+  pos: [0.1, 0.4568],
+  time: 65070
+}, {
+  pos: [0.1, 0.44829],
+  time: 65440
+}, {
+  pos: [0.1252, 0.46859],
+  time: 65790
+}, {
+  pos: [0.1441, 0.48047],
+  time: 66150
+}, {
+  pos: [0.15073, 0.48302],
+  time: 66490
+}, {
+  pos: [0.18736, 0.47345],
+  time: 66820
+}, {
+  pos: [0.215925, 0.44242],
+  time: 67110
+}, {
+  pos: [0.21611, 0.43243],
+  time: 67480
+}, {
+  pos: [0.21071, 0.44083],
+  time: 67780
+}, {
+  pos: [0.16979, 0.45634],
+  time: 68110
+}, {
+  pos: [0.18662, 0.47878],
+  time: 68450
+}, {
+  pos: [0.1775, 0.4991],
+  time: 68770
+}, {
+  pos: [0.21224, 0.46346],
+  time: 69130
+}, {
+  pos: [0.1847, 0.47876],
+  time: 69490
+}, {
+  pos: [0.21674, 0.5162],
+  time: 69850
+}, {
+  pos: [0.21974, 0.49175],
+  time: 70150
+}, {
+  pos: [0.19862, 0.48284],
+  time: 70480
+}, {
+  pos: [0.15542, 0.47366],
+  time: 70840
+}, {
+  pos: [0.13004, 0.45638],
+  time: 71200
+}, {
+  pos: [0.13796, 0.494],
+  time: 71530
+}, {
+  pos: [0.160535, 0.464075],
+  time: 71880
+}, {
+  pos: [0.15905, 0.426785],
+  time: 72210
+}, {
+  pos: [0.17795, 0.394025],
+  time: 72570
+}, {
+  pos: [0.18554, 0.393365],
+  time: 72900
+}, {
+  pos: [0.2225, 0.39353],
+  time: 73230
+}, {
+  pos: [0.24494, 0.428675],
+  time: 73560
+}, {
+  pos: [0.28744, 0.455365],
+  time: 73900
+}, {
+  pos: [0.27442, 0.451645],
+  time: 74210
+}, {
+  pos: [0.3088, 0.464065],
+  time: 74570
+}, {
+  pos: [0.3319, 0.45234],
+  time: 74920
+}, {
+  pos: [0.3652, 0.48366],
+  time: 75280
+}, {
+  pos: [0.368995, 0.453465],
+  time: 75610
+}, {
+  pos: [0.362365, 0.459415],
+  time: 75950
+}, {
+  pos: [0.356785, 0.465175],
+  time: 76310
+}, {
+  pos: [0.37026, 0.498425],
+  time: 76660
+}, {
+  pos: [0.38097, 0.517295],
+  time: 77000
+}, {
+  pos: [0.40833, 0.500655],
+  time: 77320
+}, {
+  pos: [0.39354, 0.502015],
+  time: 77660
+}, {
+  pos: [0.42703, 0.534485],
+  time: 78000
+}, {
+  pos: [0.428955, 0.511735],
+  time: 78350
+}, {
+  pos: [0.397505, 0.530095],
+  time: 78690
+}, {
+  pos: [0.35498, 0.501395],
+  time: 79040
+}, {
+  pos: [0.3494, 0.537395],
+  time: 79400
+}, {
+  pos: [0.368085, 0.54128],
+  time: 79770
+}, {
+  pos: [0.393165, 0.515045],
+  time: 80100
+}, {
+  pos: [0.384845, 0.517765],
+  time: 80420
+}, {
+  pos: [0.3794, 0.48823],
+  time: 80750
+}, {
+  pos: [0.34778, 0.49102],
+  time: 81060
+}, {
+  pos: [0.3287, 0.53116],
+  time: 81420
+}, {
+  pos: [0.348995, 0.49816],
+  time: 81750
+}, {
+  pos: [0.382945, 0.524935],
+  time: 82100
+}, {
+  pos: [0.374275, 0.559275],
+  time: 82440
+}, {
+  pos: [0.406975, 0.530025],
+  time: 82740
+}, {
+  pos: [0.398515, 0.486285],
+  time: 83100
+}, {
+  pos: [0.437955, 0.527085],
+  time: 83440
+}, {
+  pos: [0.400515, 0.551385],
+  time: 83800
+}, {
+  pos: [0.429675, 0.517365],
+  time: 84160
+}, {
+  pos: [0.4029, 0.48394],
+  time: 84510
+}, {
+  pos: [0.420225, 0.51727],
+  time: 84840
+}, {
+  pos: [0.456765, 0.48991],
+  time: 85200
+}, {
+  pos: [0.480855, 0.530995],
+  time: 85530
+}, {
+  pos: [0.44604, 0.571915],
+  time: 85860
+}, {
+  pos: [0.45607, 0.582625],
+  time: 86200
+}, {
+  pos: [0.412845, 0.619725],
+  time: 86550
+}, {
+  pos: [0.372045, 0.597965],
+  time: 86890
+}, {
+  pos: [0.400525, 0.622285],
+  time: 87210
+}, {
+  pos: [0.386, 0.625085],
+  time: 87560
+}, {
+  pos: [0.371645, 0.63449],
+  time: 87890
+}, {
+  pos: [0.36092, 0.615845],
+  time: 88220
+}, {
+  pos: [0.36128, 0.581465],
+  time: 88580
+}, {
+  pos: [0.369155, 0.61139],
+  time: 88930
+}, {
+  pos: [0.382585, 0.60935],
+  time: 89270
+}, {
+  pos: [0.39535, 0.639505],
+  time: 89640
+}, {
+  pos: [0.3697, 0.603355],
+  time: 89940
+}, {
+  pos: [0.37636, 0.593995],
+  time: 90300
+}, {
+  pos: [0.38928, 0.586855],
+  time: 90640
+}, {
+  pos: [0.39047, 0.602495],
+  time: 90980
+}, {
+  pos: [0.407095, 0.630145],
+  time: 91330
+}, {
+  pos: [0.38581, 0.599785],
+  time: 91660
+}, {
+  pos: [0.35946, 0.602335],
+  time: 92000
+}, {
+  pos: [0.370845, 0.62395],
+  time: 92330
+}, {
+  pos: [0.405495, 0.61195],
+  time: 92630
+}, {
+  pos: [0.438945, 0.6178],
+  time: 92930
+}, {
+  pos: [0.461805, 0.61816],
+  time: 93290
+}, {
+  pos: [0.45829, 0.646095],
+  time: 93660
+}, {
+  pos: [0.43239, 0.63437],
+  time: 94010
+}, {
+  pos: [0.421715, 0.66622],
+  time: 94360
+}, {
+  pos: [0.426645, 0.63596],
+  time: 94700
+}, {
+  pos: [0.441075, 0.65964],
+  time: 95070
+}, {
+  pos: [0.471675, 0.62304],
+  time: 95370
+}, {
+  pos: [0.508305, 0.64117],
+  time: 95740
+}, {
+  pos: [0.542305, 0.60139],
+  time: 96080
+}, {
+  pos: [0.529705, 0.63919],
+  time: 96440
+}, {
+  pos: [0.51568, 0.646285],
+  time: 96770
+}, {
+  pos: [0.539275, 0.664765],
+  time: 97100
+}, {
+  pos: [0.565625, 0.657635],
+  time: 97410
+}, {
+  pos: [0.571205, 0.681035],
+  time: 97770
+}, {
+  pos: [0.601955, 0.652085],
+  time: 98070
+}, {
+  pos: [0.584195, 0.606945],
+  time: 98440
+}, {
+  pos: [0.588980000000001, 0.64176],
+  time: 98770
+}, {
+  pos: [0.545060000000001, 0.60738],
+  time: 99130
+}, {
+  pos: [0.564530000000001, 0.602265],
+  time: 99460
+}, {
+  pos: [0.541760000000001, 0.586755],
+  time: 99790
+}, {
+  pos: [0.542480000000001, 0.564255],
+  time: 100150
+}, {
+  pos: [0.528260000000001, 0.605655],
+  time: 100510
+}, {
+  pos: [0.499010000000001, 0.602055],
+  time: 100810
+}, {
+  pos: [0.465665000000001, 0.648075],
+  time: 101200
+}, {
+  pos: [0.492490000000001, 0.62792],
+  time: 101490
+}, {
+  pos: [0.505630000000001, 0.67112],
+  time: 101850
+}, {
+  pos: [0.499340000000001, 0.67435],
+  time: 102190
+}, {
+  pos: [0.513450000000001, 0.68064],
+  time: 102530
+}, {
+  pos: [0.52739, 0.65956],
+  time: 102870
+}, {
+  pos: [0.527555, 0.667975],
+  time: 103200
+}, {
+  pos: [0.559895, 0.62788],
+  time: 103530
+}, {
+  pos: [0.577235, 0.65389],
+  time: 103870
+}, {
+  pos: [0.61502, 0.632275],
+  time: 104200
+}, {
+  pos: [0.61978, 0.658795],
+  time: 104540
+}, {
+  pos: [0.612355, 0.63157],
+  time: 104870
+}, {
+  pos: [0.61288, 0.61932],
+  time: 105220
+}, {
+  pos: [0.61568, 0.59062],
+  time: 105570
+}, {
+  pos: [0.58423, 0.56308],
+  time: 105910
+}, {
+  pos: [0.550750000000001, 0.5854],
+  time: 106270
+}, {
+  pos: [0.588375000000001, 0.543925],
+  time: 106620
+}, {
+  pos: [0.602935000000001, 0.518165],
+  time: 106940
+}, {
+  pos: [0.627355000000001, 0.531035],
+  time: 107270
+}, {
+  pos: [0.629565000000001, 0.502645],
+  time: 107610
+}, {
+  pos: [0.607125000000001, 0.515185],
+  time: 107940
+}, {
+  pos: [0.583530000000001, 0.49621],
+  time: 108270
+}, {
+  pos: [0.553780000000001, 0.46442],
+  time: 108610
+}, {
+  pos: [0.576355000000001, 0.462495],
+  time: 108960
+}, {
+  pos: [0.558165000000001, 0.466065],
+  time: 109300
+}, {
+  pos: [0.599135000000001, 0.446685],
+  time: 109640
+}, {
+  pos: [0.569385, 0.45561],
+  time: 109990
+}, {
+  pos: [0.572105000000001, 0.46428],
+  time: 110330
+}, {
+  pos: [0.539805000000001, 0.45884],
+  time: 110670
+}, {
+  pos: [0.578655000000001, 0.46549],
+  time: 111020
+}, {
+  pos: [0.600415000000001, 0.42911],
+  time: 111360
+}, {
+  pos: [0.631105000000001, 0.417395],
+  time: 111690
+}, {
+  pos: [0.630755000000001, 0.375395],
+  time: 112040
+}, {
+  pos: [0.641780000000001, 0.39377],
+  time: 112390
+}, {
+  pos: [0.617130000000001, 0.37439],
+  time: 112730
+}, {
+  pos: [0.582930000000001, 0.37199],
+  time: 113930
+}];
+module.exports = Beatmap;
+
+/***/ }),
+
+/***/ "./src/assets/beatmaps/beatmap9.js":
+/*!*****************************************!*\
+  !*** ./src/assets/beatmaps/beatmap9.js ***!
+  \*****************************************/
+/*! unknown exports (runtime-defined) */
+/*! runtime requirements: module */
+/***/ ((module) => {
+
+//9 sunflower
+var Beatmap = [{
+  pos: [0.5, 0.5],
+  time: 1240
+}, {
+  pos: [0.51568, 0.55544],
+  time: 1800
+}, {
+  pos: [0.490495, 0.622235],
+  time: 2530
+}, {
+  pos: [0.53242, 0.56861],
+  time: 3180
+}, {
+  pos: [0.55948, 0.56135],
+  time: 3840
+}, {
+  pos: [0.58328, 0.48315],
+  time: 4520
+}, {
+  pos: [0.555525, 0.43618],
+  time: 5130
+}, {
+  pos: [0.536055, 0.4375],
+  time: 5790
+}, {
+  pos: [0.471705, 0.3715],
+  time: 6450
+}, {
+  pos: [0.420405, 0.3607],
+  time: 7050
+}, {
+  pos: [0.444905, 0.4048],
+  time: 7750
+}, {
+  pos: [0.385055, 0.461815],
+  time: 8380
+}, {
+  pos: [0.424255, 0.538815],
+  time: 9080
+}, {
+  pos: [0.37323, 0.61909],
+  time: 9730
+}, {
+  pos: [0.346905, 0.56514],
+  time: 10380
+}, {
+  pos: [0.36868, 0.5705],
+  time: 11050
+}, {
+  pos: [0.430095, 0.59109],
+  time: 11760
+}, {
+  pos: [0.416025, 0.64536],
+  time: 12430
+}, {
+  pos: [0.369945, 0.70456],
+  time: 13070
+}, {
+  pos: [0.32737, 0.77996],
+  time: 13720
+}, {
+  pos: [0.38689, 0.73964],
+  time: 14360
+}, {
+  pos: [0.458995, 0.82244],
+  time: 15050
+}, {
+  pos: [0.408075, 0.81239],
+  time: 15720
+}, {
+  pos: [0.360555, 0.87179],
+  time: 16380
+}, {
+  pos: [0.392235, 0.9],
+  time: 17040
+}, {
+  pos: [0.354615, 0.9],
+  time: 17700
+}, {
+  pos: [0.39917, 0.9],
+  time: 18370
+}, {
+  pos: [0.379955, 0.837],
+  time: 19000
+}, {
+  pos: [0.395465, 0.88551],
+  time: 19660
+}, {
+  pos: [0.459815, 0.9],
+  time: 20320
+}, {
+  pos: [0.49673, 0.87792],
+  time: 21010
+}, {
+  pos: [0.513955, 0.9],
+  time: 21660
+}, {
+  pos: [0.53086, 0.899655],
+  time: 22350
+}, {
+  pos: [0.587475, 0.9],
+  time: 23020
+}, {
+  pos: [0.624275, 0.9],
+  time: 23660
+}, {
+  pos: [0.65744, 0.9],
+  time: 24330
+}, {
+  pos: [0.73115, 0.88425],
+  time: 24960
+}, {
+  pos: [0.78609, 0.83534],
+  time: 25630
+}, {
+  pos: [0.7554, 0.75515],
+  time: 26290
+}, {
+  pos: [0.77416, 0.71629],
+  time: 26960
+}, {
+  pos: [0.727855, 0.664945],
+  time: 27590
+}, {
+  pos: [0.746755, 0.651295],
+  time: 27940
+}, {
+  pos: [0.767155, 0.613895],
+  time: 28280
+}, {
+  pos: [0.779755, 0.594995],
+  time: 28630
+}, {
+  pos: [0.760035, 0.634775],
+  time: 28970
+}, {
+  pos: [0.766275, 0.618775],
+  time: 29290
+}, {
+  pos: [0.746555, 0.650395],
+  time: 29630
+}, {
+  pos: [0.701605, 0.596455],
+  time: 30250
+}, {
+  pos: [0.712335, 0.61181],
+  time: 30620
+}, {
+  pos: [0.699885, 0.62951],
+  time: 30920
+}, {
+  pos: [0.73503, 0.5975],
+  time: 31250
+}, {
+  pos: [0.721905, 0.56495],
+  time: 31600
+}, {
+  pos: [0.685265, 0.55167],
+  time: 31920
+}, {
+  pos: [0.675465, 0.574595],
+  time: 32270
+}, {
+  pos: [0.64331, 0.50232],
+  time: 32860
+}, {
+  pos: [0.651885, 0.48552],
+  time: 33210
+}, {
+  pos: [0.675565, 0.49329],
+  time: 33580
+}, {
+  pos: [0.660115, 0.47424],
+  time: 33880
+}, {
+  pos: [0.674835, 0.5112],
+  time: 34200
+}, {
+  pos: [0.679155, 0.49648],
+  time: 34520
+}, {
+  pos: [0.646685, 0.48186],
+  time: 34860
+}, {
+  pos: [0.590255, 0.49704],
+  time: 35520
+}, {
+  pos: [0.570365, 0.45828],
+  time: 35860
+}, {
+  pos: [0.568835, 0.42037],
+  time: 36200
+}, {
+  pos: [0.544765, 0.45575],
+  time: 36490
+}, {
+  pos: [0.52645, 0.49139],
+  time: 36820
+}, {
+  pos: [0.5541, 0.45569],
+  time: 37170
+}, {
+  pos: [0.558825, 0.463565],
+  time: 37520
+}, {
+  pos: [0.51252, 0.4601],
+  time: 38150
+}, {
+  pos: [0.52374, 0.45746],
+  time: 38480
+}, {
+  pos: [0.55078, 0.44978],
+  time: 38800
+}, {
+  pos: [0.57206, 0.4717],
+  time: 39120
+}, {
+  pos: [0.53806, 0.48972],
+  time: 39460
+}, {
+  pos: [0.54206, 0.48316],
+  time: 39780
+}, {
+  pos: [0.54899, 0.473095],
+  time: 40110
+}, {
+  pos: [0.616085, 0.421435],
+  time: 40740
+}, {
+  pos: [0.649235, 0.386585],
+  time: 41080
+}, {
+  pos: [0.643635, 0.373285],
+  time: 41430
+}, {
+  pos: [0.649415, 0.399125],
+  time: 41770
+}, {
+  pos: [0.67024, 0.39545],
+  time: 42120
+}, {
+  pos: [0.68564, 0.3622],
+  time: 42470
+}, {
+  pos: [0.64829, 0.33685],
+  time: 42770
+}, {
+  pos: [0.56989, 0.29749],
+  time: 43410
+}, {
+  pos: [0.59629, 0.258385],
+  time: 43740
+}, {
+  pos: [0.625825, 0.25492],
+  time: 44070
+}, {
+  pos: [0.605025, 0.21988],
+  time: 44390
+}, {
+  pos: [0.635475, 0.20728],
+  time: 44740
+}, {
+  pos: [0.66501, 0.16768],
+  time: 45070
+}, {
+  pos: [0.674285, 0.19323],
+  time: 45420
+}, {
+  pos: [0.62152, 0.26948],
+  time: 46030
+}, {
+  pos: [0.58409, 0.30425],
+  time: 46410
+}, {
+  pos: [0.561925, 0.338195],
+  time: 46720
+}, {
+  pos: [0.528165, 0.352755],
+  time: 47040
+}, {
+  pos: [0.560965, 0.324275],
+  time: 47360
+}, {
+  pos: [0.593285, 0.295315],
+  time: 47680
+}, {
+  pos: [0.558435, 0.281885],
+  time: 48020
+}, {
+  pos: [0.502005, 0.281225],
+  time: 48680
+}, {
+  pos: [0.4728, 0.29261],
+  time: 49010
+}, {
+  pos: [0.489135, 0.280895],
+  time: 49340
+}, {
+  pos: [0.51999, 0.25466],
+  time: 49670
+}, {
+  pos: [0.48381, 0.2831],
+  time: 50030
+}, {
+  pos: [0.518685, 0.28713],
+  time: 50340
+}, {
+  pos: [0.532965, 0.32181],
+  time: 50680
+}, {
+  pos: [0.595065, 0.33009],
+  time: 51370
+}, {
+  pos: [0.56658, 0.31335],
+  time: 51640
+}, {
+  pos: [0.55074, 0.310545],
+  time: 51970
+}, {
+  pos: [0.55686, 0.288275],
+  time: 52310
+}, {
+  pos: [0.55446, 0.306675],
+  time: 52630
+}, {
+  pos: [0.53367, 0.30981],
+  time: 52960
+}, {
+  pos: [0.50239, 0.29995],
+  time: 53300
+}, {
+  pos: [0.5244, 0.32847],
+  time: 53920
+}, {
+  pos: [0.51029, 0.34377],
+  time: 54260
+}, {
+  pos: [0.49159, 0.30875],
+  time: 54600
+}, {
+  pos: [0.44947, 0.32351],
+  time: 54960
+}, {
+  pos: [0.442375, 0.33638],
+  time: 55290
+}, {
+  pos: [0.443655, 0.37222],
+  time: 55610
+}, {
+  pos: [0.464055, 0.39823],
+  time: 55950
+}, {
+  pos: [0.534735, 0.39575],
+  time: 56570
+}, {
+  pos: [0.572545, 0.39366],
+  time: 56950
+}, {
+  pos: [0.608815, 0.40792],
+  time: 57260
+}, {
+  pos: [0.623575, 0.36814],
+  time: 57620
+}, {
+  pos: [0.65971, 0.338275],
+  time: 57950
+}, {
+  pos: [0.62371, 0.355715],
+  time: 58270
+}, {
+  pos: [0.62668, 0.34532],
+  time: 58600
+}, {
+  pos: [0.558755, 0.37587],
+  time: 59250
+}, {
+  pos: [0.564155, 0.41979],
+  time: 59610
+}, {
+  pos: [0.578645, 0.47016],
+  time: 60070
+}, {
+  pos: [0.609965, 0.49858],
+  time: 60360
+}, {
+  pos: [0.645875, 0.527935],
+  time: 60930
+}, {
+  pos: [0.650975, 0.544255],
+  time: 61610
+}, {
+  pos: [0.651235, 0.520595],
+  time: 61870
+}, {
+  pos: [0.667285, 0.487295],
+  time: 62170
+}, {
+  pos: [0.653245, 0.479195],
+  time: 62530
+}, {
+  pos: [0.651265, 0.50444],
+  time: 62860
+}, {
+  pos: [0.728615, 0.49404],
+  time: 63510
+}, {
+  pos: [0.72275, 0.415035],
+  time: 64200
+}, {
+  pos: [0.717215, 0.42138],
+  time: 64470
+}, {
+  pos: [0.746585, 0.35142],
+  time: 65130
+}, {
+  pos: [0.705955, 0.30994],
+  time: 65470
+}, {
+  pos: [0.658695, 0.34224],
+  time: 66150
+}, {
+  pos: [0.608295, 0.43224],
+  time: 66950
+}, {
+  pos: [0.569815, 0.49033],
+  time: 67690
+}, {
+  pos: [0.60256, 0.499765],
+  time: 68060
+}, {
+  pos: [0.53581, 0.46489],
+  time: 68810
+}, {
+  pos: [0.54355, 0.43537],
+  time: 69170
+}, {
+  pos: [0.55405, 0.43582],
+  time: 69470
+}, {
+  pos: [0.466175, 0.43297],
+  time: 70420
+}, {
+  pos: [0.504125, 0.395185],
+  time: 70750
+}, {
+  pos: [0.542405, 0.37918],
+  time: 71080
+}, {
+  pos: [0.54653, 0.404095],
+  time: 71410
+}, {
+  pos: [0.50693, 0.370975],
+  time: 71770
+}, {
+  pos: [0.50879, 0.33331],
+  time: 72080
+}, {
+  pos: [0.60101, 0.23102],
+  time: 73140
+}, {
+  pos: [0.62891, 0.19892],
+  time: 73740
+}, {
+  pos: [0.60406, 0.229095],
+  time: 74450
+}, {
+  pos: [0.56326, 0.223095],
+  time: 75050
+}, {
+  pos: [0.562915, 0.242415],
+  time: 75740
+}, {
+  pos: [0.615715, 0.247695],
+  time: 76400
+}, {
+  pos: [0.650695, 0.283995],
+  time: 76730
+}, {
+  pos: [0.616195, 0.234495],
+  time: 77330
+}, {
+  pos: [0.634075, 0.1],
+  time: 78820
+}, {
+  pos: [0.664625, 0.1],
+  time: 79080
+}, {
+  pos: [0.690495, 0.1],
+  time: 79340
+}, {
+  pos: [0.648505, 0.1],
+  time: 79680
+}, {
+  pos: [0.641665, 0.1],
+  time: 80040
+}, {
+  pos: [0.695665, 0.1],
+  time: 81040
+}, {
+  pos: [0.767605, 0.1],
+  time: 81700
+}, {
+  pos: [0.72508, 0.11295],
+  time: 82050
+}, {
+  pos: [0.68548, 0.120375],
+  time: 82380
+}, {
+  pos: [0.68641, 0.13851],
+  time: 82690
+}, {
+  pos: [0.69217, 0.1],
+  time: 83650
+}, {
+  pos: [0.736675, 0.16141],
+  time: 84340
+}, {
+  pos: [0.74759, 0.125705],
+  time: 84710
+}, {
+  pos: [0.73284, 0.143995],
+  time: 85300
+}, {
+  pos: [0.73116, 0.127615],
+  time: 86140
+}, {
+  pos: [0.66796, 0.221625],
+  time: 86930
+}, {
+  pos: [0.706985, 0.254175],
+  time: 87280
+}, {
+  pos: [0.646215, 0.296065],
+  time: 87870
+}, {
+  pos: [0.79497, 0.22486],
+  time: 89280
+}, {
+  pos: [0.82448, 0.21849],
+  time: 89540
+}, {
+  pos: [0.776705, 0.249105],
+  time: 89930
+}, {
+  pos: [0.823825, 0.235775],
+  time: 90550
+}, {
+  pos: [0.814255, 0.296165],
+  time: 91210
+}, {
+  pos: [0.82554, 0.305045],
+  time: 91580
+}, {
+  pos: [0.82624, 0.310645],
+  time: 91930
+}, {
+  pos: [0.80014, 0.344395],
+  time: 92230
+}, {
+  pos: [0.80311, 0.306445],
+  time: 92560
+}, {
+  pos: [0.819115, 0.27691],
+  time: 92890
+}, {
+  pos: [0.809545, 0.25381],
+  time: 93220
+}, {
+  pos: [0.759495, 0.24276],
+  time: 93870
+}, {
+  pos: [0.796995, 0.27186],
+  time: 94170
+}, {
+  pos: [0.791995, 0.26466],
+  time: 94570
+}, {
+  pos: [0.776635, 0.27074],
+  time: 94890
+}, {
+  pos: [0.816595, 0.235035],
+  time: 95260
+}, {
+  pos: [0.827615, 0.222855],
+  time: 95550
+}, {
+  pos: [0.820575, 0.171335],
+  time: 96190
+}, {
+  pos: [0.761755, 0.160455],
+  time: 96870
+}, {
+  pos: [0.81499, 0.17274],
+  time: 97500
+}, {
+  pos: [0.74062, 0.15398],
+  time: 98170
+}, {
+  pos: [0.73579, 0.175025],
+  time: 98860
+}, {
+  pos: [0.745505, 0.132145],
+  time: 99530
+}, {
+  pos: [0.725375, 0.1],
+  time: 100140
+}, {
+  pos: [0.661725, 0.17236],
+  time: 100810
+}, {
+  pos: [0.71604, 0.113075],
+  time: 101520
+}, {
+  pos: [0.648315, 0.1],
+  time: 102150
+}, {
+  pos: [0.673915, 0.13424],
+  time: 102470
+}, {
+  pos: [0.662445, 0.108045],
+  time: 102780
+}, {
+  pos: [0.706475, 0.1],
+  time: 103150
+}, {
+  pos: [0.676725, 0.1112],
+  time: 103500
+}, {
+  pos: [0.731015, 0.1],
+  time: 104110
+}, {
+  pos: [0.70709, 0.12079],
+  time: 104440
+}, {
+  pos: [0.737615, 0.12937],
+  time: 104770
+}, {
+  pos: [0.759575, 0.1],
+  time: 105130
+}, {
+  pos: [0.782295, 0.1],
+  time: 105450
+}, {
+  pos: [0.80347, 0.1],
+  time: 105800
+}, {
+  pos: [0.78177, 0.1224],
+  time: 106150
+}, {
+  pos: [0.74212, 0.1224],
+  time: 106760
+}, {
+  pos: [0.72133, 0.153915],
+  time: 107090
+}, {
+  pos: [0.747215, 0.144615],
+  time: 107400
+}, {
+  pos: [0.740735, 0.136335],
+  time: 107760
+}, {
+  pos: [0.776895, 0.120335],
+  time: 108080
+}, {
+  pos: [0.754125, 0.160925],
+  time: 108410
+}, {
+  pos: [0.75276, 0.12212],
+  time: 108800
+}, {
+  pos: [0.71256, 0.15962],
+  time: 109400
+}, {
+  pos: [0.73602, 0.13497],
+  time: 109740
+}, {
+  pos: [0.7384, 0.11168],
+  time: 110080
+}, {
+  pos: [0.77291, 0.10947],
+  time: 110420
+}, {
+  pos: [0.77723, 0.11651],
+  time: 110740
+}, {
+  pos: [0.76373, 0.1],
+  time: 111100
+}, {
+  pos: [0.762905, 0.13993],
+  time: 111430
+}, {
+  pos: [0.762905, 0.14182],
+  time: 112060
+}, {
+  pos: [0.841105, 0.11156],
+  time: 112740
+}, {
+  pos: [0.848695, 0.1571],
+  time: 113400
+}, {
+  pos: [0.9, 0.163465],
+  time: 114070
+}, {
+  pos: [0.9, 0.12089],
+  time: 114720
+}, {
+  pos: [0.9, 0.12023],
+  time: 115380
+}, {
+  pos: [0.9, 0.1],
+  time: 116040
+}, {
+  pos: [0.87052, 0.1],
+  time: 116710
+}, {
+  pos: [0.821695, 0.10567],
+  time: 117340
+}, {
+  pos: [0.75767, 0.150195],
+  time: 117990
+}, {
+  pos: [0.79127, 0.194995],
+  time: 118630
+}, {
+  pos: [0.73472, 0.155995],
+  time: 119280
+}, {
+  pos: [0.713615, 0.171115],
+  time: 119910
+}, {
+  pos: [0.75147, 0.23041],
+  time: 120580
+}, {
+  pos: [0.79194, 0.15302],
+  time: 121290
+}, {
+  pos: [0.73686, 0.1],
+  time: 121970
+}, {
+  pos: [0.68994, 0.1],
+  time: 122650
+}, {
+  pos: [0.6913, 0.1085],
+  time: 123330
+}, {
+  pos: [0.628885, 0.138425],
+  time: 123900
+}, {
+  pos: [0.638745, 0.116495],
+  time: 124240
+}, {
+  pos: [0.668385, 0.102625],
+  time: 124620
+}, {
+  pos: [0.710865, 0.126925],
+  time: 124980
+}, {
+  pos: [0.594775, 0.108125],
+  time: 125920
+}, {
+  pos: [0.566215, 0.1],
+  time: 126600
+}, {
+  pos: [0.639245, 0.1],
+  time: 127270
+}, {
+  pos: [0.604145, 0.14875],
+  time: 127920
+}, {
+  pos: [0.538525, 0.14161],
+  time: 128600
+}, {
+  pos: [0.607325, 0.16593],
+  time: 129240
+}, {
+  pos: [0.637925, 0.16933],
+  time: 129580
+}, {
+  pos: [0.618455, 0.16504],
+  time: 130240
+}, {
+  pos: [0.566475, 0.1563],
+  time: 131160
+}, {
+  pos: [0.578635, 0.2057],
+  time: 131920
+}, {
+  pos: [0.613655, 0.16983],
+  time: 132260
+}, {
+  pos: [0.5794, 0.18874],
+  time: 132570
+}, {
+  pos: [0.56607, 0.170605],
+  time: 132880
+}, {
+  pos: [0.538315, 0.1],
+  time: 133790
+}, {
+  pos: [0.556675, 0.1],
+  time: 134470
+}, {
+  pos: [0.523715, 0.1104],
+  time: 134790
+}, {
+  pos: [0.497585, 0.1],
+  time: 135180
+}, {
+  pos: [0.519855, 0.10527],
+  time: 135520
+}, {
+  pos: [0.621975, 0.1],
+  time: 136440
+}, {
+  pos: [0.665495, 0.1],
+  time: 137120
+}, {
+  pos: [0.647995, 0.136575],
+  time: 137470
+}, {
+  pos: [0.66776, 0.1],
+  time: 138060
+}, {
+  pos: [0.69626, 0.19234],
+  time: 139200
+}, {
+  pos: [0.67421, 0.22759],
+  time: 139500
+}, {
+  pos: [0.66806, 0.19729],
+  time: 139800
+}, {
+  pos: [0.632535, 0.183115],
+  time: 140150
+}, {
+  pos: [0.59066, 0.26318],
+  time: 140820
+}, {
+  pos: [0.5273, 0.4115],
+  time: 142260
+}, {
+  pos: [0.516425, 0.3975],
+  time: 142510
+}, {
+  pos: [0.539625, 0.414465],
+  time: 142800
+}, {
+  pos: [0.5212, 0.35517],
+  time: 143470
+}, {
+  pos: [0.551575, 0.40017],
+  time: 144220
+}, {
+  pos: [0.497815, 0.40857],
+  time: 144780
+}, {
+  pos: [0.433725, 0.47875],
+  time: 145360
+}, {
+  pos: [0.42885, 0.531075],
+  time: 146010
+}, {
+  pos: [0.49329, 0.579675],
+  time: 146730
+}, {
+  pos: [0.54081, 0.586275],
+  time: 147390
+}, {
+  pos: [0.535485, 0.506755],
+  time: 148100
+}, {
+  pos: [0.550845, 0.485635],
+  time: 148740
+}, {
+  pos: [0.471995, 0.562585],
+  time: 149690
+}, {
+  pos: [0.423485, 0.60574],
+  time: 150320
+}, {
+  pos: [0.366185, 0.54514],
+  time: 150920
+}, {
+  pos: [0.420575, 0.560575],
+  time: 151410
+}];
+module.exports = Beatmap;
 
 /***/ }),
 
@@ -1460,6 +8675,7 @@ module.exports = Beat;
   \*********************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 66:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Beat = __webpack_require__(/*! ./beat */ "./src/beat.js");
@@ -1468,560 +8684,8 @@ Game.BG_COLOR = "#000000";
 Game.DIM_X = 1000;
 Game.DIM_Y = 600;
 
-function Game(options) {
-  // this.beatmap = options.beatmap;
-  // this.imageURL = options.imageURL;
-  // this.beatmap = [
-  //   { pos: [20, 20], time: 2000 },
-  //   { pos: [460, 40], time: 2500 },
-  //   { pos: [850, 200], time: 3000, type: "DRAG", length: 100, dir: 300 },
-  //   { pos: [230, 300], time: 4000 },
-  //   { pos: [200, 290], time: 5000 },
-  //   { pos: [600, 400], time: 6000 },
-  //   { pos: [715, 200], time: 8000 },
-  //   { pos: [230, 300], time: 9000 },
-  // ];
-  this.beatmap = [{
-    pos: [590, 238],
-    time: 800
-  }, {
-    pos: [250, 308],
-    time: 2140,
-    type: "DRAG",
-    length: 100,
-    dir: 300
-  }, {
-    pos: [466, 92],
-    time: 3480
-  }, {
-    pos: [892, 36],
-    time: 4160
-  }, {
-    pos: [944, 273],
-    time: 4790,
-    type: "DRAG",
-    length: 100,
-    dir: 300
-  }, {
-    pos: [585, 178],
-    time: 5480
-  }, {
-    pos: [343, 504],
-    time: 6130.8,
-    type: "DRAG",
-    length: 100,
-    dir: 300
-  }, {
-    pos: [588, 531],
-    time: 7480
-  }, {
-    pos: [523, 207],
-    time: 9136
-  }, {
-    pos: [53, 82],
-    time: 9809.2
-  }, {
-    pos: [594, 135],
-    time: 10129.6,
-    type: "DRAG",
-    length: 100,
-    dir: 300
-  }, {
-    pos: [0, 519],
-    time: 10789.2
-  }, {
-    pos: [177, 499],
-    time: 11465.2
-  }, {
-    pos: [131, 302],
-    time: 11790.8
-  }, {
-    pos: [268, 428],
-    time: 12803.6
-  }, {
-    pos: [531, 485],
-    time: 13466
-  }, {
-    pos: [105, 342],
-    time: 14130.8
-  }, {
-    pos: [930, 81],
-    time: 15461.2
-  }, {
-    pos: [501, 191],
-    time: 16126
-  }, {
-    pos: [762, 571],
-    time: 16800
-  }, {
-    pos: [592, 121],
-    time: 18131.2
-  }, {
-    pos: [463, 214],
-    time: 18800
-  }, {
-    pos: [529, 263],
-    time: 19804.4
-  }, {
-    pos: [495, 95],
-    time: 20058.4
-  }, {
-    pos: [535, 464],
-    time: 20800
-  }, {
-    pos: [859, 375],
-    time: 21460.4
-  }, {
-    pos: [31, 277],
-    time: 23480
-  }, {
-    pos: [328, 283],
-    time: 24137.2
-  }, {
-    pos: [825, 332],
-    time: 24804.8
-  }, {
-    pos: [938, 86],
-    time: 26124
-  }, {
-    pos: [299, 263],
-    time: 26792
-  }, {
-    pos: [984, 286],
-    time: 27460
-  }, {
-    pos: [702, 90],
-    time: 28744
-  }, {
-    pos: [648, 310],
-    time: 29449.6
-  }, {
-    pos: [20, 520],
-    time: 30131.2
-  }, {
-    pos: [455, 135],
-    time: 31456
-  }, {
-    pos: [266, 243],
-    time: 32126.4
-  }, {
-    pos: [551, 270],
-    time: 32778
-  }, {
-    pos: [355, 256],
-    time: 34132.4
-  }, {
-    pos: [469, 109],
-    time: 34789.6
-  }, {
-    pos: [300, 399],
-    time: 35343.2
-  }, {
-    pos: [976, 324],
-    time: 35785.2
-  }, {
-    pos: [992, 494],
-    time: 36790.4
-  }, {
-    pos: [886, 1],
-    time: 37454.8
-  }, {
-    pos: [709, 428],
-    time: 38122.8
-  }, {
-    pos: [630, 247],
-    time: 39404
-  }, {
-    pos: [893, 99],
-    time: 40069.2
-  }, {
-    pos: [939, 418],
-    time: 40802.4
-  }, {
-    pos: [472, 324],
-    time: 42110.8
-  }, {
-    pos: [383, 468],
-    time: 42784
-  }, {
-    pos: [765, 484],
-    time: 43440.8
-  }, {
-    pos: [661, 535],
-    time: 43788.8
-  }, {
-    pos: [777, 227],
-    time: 44806.8
-  }, {
-    pos: [169, 76],
-    time: 45463.6
-  }, {
-    pos: [978, 448],
-    time: 46126
-  }, {
-    pos: [310, 492],
-    time: 46465.2
-  }, {
-    pos: [988, 23],
-    time: 47462
-  }, {
-    pos: [526, 518],
-    time: 48143.2
-  }, {
-    pos: [650, 313],
-    time: 48787.6
-  }, {
-    pos: [304, 270],
-    time: 50143.2
-  }, {
-    pos: [6, 343],
-    time: 51468.4
-  }, {
-    pos: [90, 133],
-    time: 52812.4
-  }, {
-    pos: [197, 104],
-    time: 54143.2
-  }, {
-    pos: [771, 302],
-    time: 55466.4
-  }, {
-    pos: [767, 233],
-    time: 56129.2
-  }, {
-    pos: [511, 74],
-    time: 56800.4
-  }, {
-    pos: [561, 59],
-    time: 57148
-  }, {
-    pos: [307, 153],
-    time: 58018
-  }, {
-    pos: [316, 339],
-    time: 58803.2
-  }, {
-    pos: [550, 478],
-    time: 61126.4
-  }, {
-    pos: [895, 376],
-    time: 61455.6
-  }, {
-    pos: [530, 515],
-    time: 62460
-  }, {
-    pos: [762, 40],
-    time: 63609.6
-  }, {
-    pos: [175, 110],
-    time: 65049.2
-  }, {
-    pos: [385, 570],
-    time: 66480.4
-  }, {
-    pos: [692, 203],
-    time: 67810.8
-  }, {
-    pos: [237, 36],
-    time: 69452.8
-  }, {
-    pos: [568, 543],
-    time: 70111.2
-  }, {
-    pos: [769, 563],
-    time: 70462.8
-  }, {
-    pos: [16, 558],
-    time: 71774
-  }, {
-    pos: [606, 192],
-    time: 72802.8
-  }, {
-    pos: [845, 4],
-    time: 73440.4
-  }, {
-    pos: [638, 584],
-    time: 73763.6
-  }, {
-    pos: [382, 27],
-    time: 74379.2
-  }, {
-    pos: [167, 555],
-    time: 75462
-  }, {
-    pos: [738, 500],
-    time: 76048.8
-  }, {
-    pos: [548, 115],
-    time: 76379.6
-  }, {
-    pos: [300, 546],
-    time: 77091.6
-  }, {
-    pos: [586, 503],
-    time: 78124
-  }, {
-    pos: [429, 121],
-    time: 79445.6
-  }, {
-    pos: [108, 421],
-    time: 79779.6
-  }, {
-    pos: [302, 348],
-    time: 80812.4
-  }, {
-    pos: [109, 550],
-    time: 81361.2
-  }, {
-    pos: [300, 191],
-    time: 81785.2
-  }, {
-    pos: [821, 545],
-    time: 82127.6
-  }, {
-    pos: [978, 175],
-    time: 82480.8
-  }, {
-    pos: [78, 305],
-    time: 83614
-  }, {
-    pos: [651, 264],
-    time: 84380.4
-  }, {
-    pos: [491, 192],
-    time: 85092
-  }, {
-    pos: [883, 500],
-    time: 86468.8
-  }, {
-    pos: [196, 600],
-    time: 89128.8
-  }, {
-    pos: [909, 115],
-    time: 91132.4
-  }, {
-    pos: [384, 259],
-    time: 91389.6
-  }, {
-    pos: [689, 170],
-    time: 91966.8
-  }, {
-    pos: [633, 400],
-    time: 93168
-  }, {
-    pos: [692, 563],
-    time: 93647.6
-  }, {
-    pos: [673, 29],
-    time: 93808.8
-  }, {
-    pos: [556, 151],
-    time: 94134.8
-  }, {
-    pos: [350, 75],
-    time: 95464.8
-  }, {
-    pos: [18, 326],
-    time: 96124.4
-  }, {
-    pos: [864, 48],
-    time: 96788
-  }, {
-    pos: [877, 172],
-    time: 97216.4
-  }, {
-    pos: [901, 553],
-    time: 97739.2
-  }, {
-    pos: [482, 581],
-    time: 98138.8
-  }, {
-    pos: [840, 278],
-    time: 99486.8
-  }, {
-    pos: [734, 441],
-    time: 99909.6
-  }, {
-    pos: [794, 61],
-    time: 100413.2
-  }, {
-    pos: [348, 39],
-    time: 100788
-  }, {
-    pos: [107, 157],
-    time: 101458.8
-  }, {
-    pos: [355, 385],
-    time: 102143.2
-  }, {
-    pos: [671, 269],
-    time: 103471.2
-  }, {
-    pos: [170, 353],
-    time: 104124.4
-  }, {
-    pos: [876, 15],
-    time: 104762
-  }, {
-    pos: [606, 492],
-    time: 106126.4
-  }, {
-    pos: [143, 156],
-    time: 106779.6
-  }, {
-    pos: [248, 476],
-    time: 107454.8
-  }, {
-    pos: [583, 307],
-    time: 108805.2
-  }, {
-    pos: [162, 273],
-    time: 109467.2
-  }, {
-    pos: [368, 145],
-    time: 110129.2
-  }, {
-    pos: [283, 291],
-    time: 111454.8
-  }, {
-    pos: [992, 227],
-    time: 112370.8
-  }, {
-    pos: [770, 22],
-    time: 112685.6
-  }, {
-    pos: [114, 64],
-    time: 113503.2
-  }, {
-    pos: [518, 169],
-    time: 115132.4
-  }, {
-    pos: [947, 473],
-    time: 117784.8
-  }, {
-    pos: [319, 135],
-    time: 120480.4
-  }, {
-    pos: [634, 341],
-    time: 122764
-  }, {
-    pos: [184, 380],
-    time: 123342.4
-  }, {
-    pos: [760, 569],
-    time: 123789.6
-  }, {
-    pos: [127, 239],
-    time: 124071.6
-  }, {
-    pos: [860, 56],
-    time: 125131.6
-  }, {
-    pos: [416, 131],
-    time: 126082.8
-  }, {
-    pos: [399, 483],
-    time: 126812.4
-  }, {
-    pos: [219, 535],
-    time: 127040.8
-  }, {
-    pos: [663, 283],
-    time: 127747.2
-  }, {
-    pos: [495, 387],
-    time: 128787.6
-  }, {
-    pos: [750, 270],
-    time: 129063.6
-  }, {
-    pos: [934, 86],
-    time: 129454.8
-  }, {
-    pos: [410, 571],
-    time: 129729.6
-  }, {
-    pos: [554, 491],
-    time: 130482
-  }, {
-    pos: [614, 491],
-    time: 131464
-  }, {
-    pos: [766, 99],
-    time: 131786.8
-  }, {
-    pos: [774, 445],
-    time: 132030.8
-  }, {
-    pos: [262, 570],
-    time: 132730
-  }, {
-    pos: [71, 40],
-    time: 134129.6
-  }, {
-    pos: [454, 533],
-    time: 134280
-  }, {
-    pos: [840, 587],
-    time: 134739.2
-  }, {
-    pos: [933, 568],
-    time: 135787.6
-  }, {
-    pos: [562, 479],
-    time: 137379.2
-  }, {
-    pos: [376, 504],
-    time: 137840
-  }, {
-    pos: [221, 306],
-    time: 138408.8
-  }, {
-    pos: [732, 346],
-    time: 138722.4
-  }, {
-    pos: [961, 335],
-    time: 139457.2
-  }, {
-    pos: [639, 268],
-    time: 139800.4
-  }, {
-    pos: [703, 70],
-    time: 140136.4
-  }, {
-    pos: [481, 230],
-    time: 140507.6
-  }, {
-    pos: [803, 47],
-    time: 141177.6
-  }, {
-    pos: [556, 50],
-    time: 141462
-  }, {
-    pos: [776, 518],
-    time: 142140.8
-  }, {
-    pos: [94, 234],
-    time: 142450
-  }, {
-    pos: [954, 76],
-    time: 145101.6
-  }, {
-    pos: [760, 205],
-    time: 145652
-  }, {
-    pos: [949, 16],
-    time: 146457.2
-  }, {
-    pos: [678, 410],
-    time: 147142.8
-  }, {
-    pos: [247, 417],
-    time: 147760
-  }, {
-    pos: [636, 53],
-    time: 148544.8
-  }];
+function Game(beatmap) {
+  this.beatmap = beatmap;
 }
 
 Game.prototype.draw = function draw(ctx) {
@@ -2070,7 +8734,11 @@ Game.prototype.checkSeq = function checkSeq() {
 };
 
 Game.prototype.makeBeats = function makeBeats() {
+  var windowX = window.innerWidth;
+  var windowY = window.innerHeight;
   this.beats = this.beatmap.map(function (beat) {
+    beat.pos[0] = Math.floor(beat.pos[0] * windowX);
+    beat.pos[1] = Math.floor(beat.pos[1] * windowY);
     return new Beat(beat);
   });
 };
@@ -2087,9 +8755,8 @@ module.exports = Game;
 /*! runtime requirements: module, __webpack_require__ */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-var Util = __webpack_require__(/*! ./util */ "./src/util.js");
+var Util = __webpack_require__(/*! ./util */ "./src/util.js"); // const anime = require("animejs");
 
-var anime = __webpack_require__(/*! animejs */ "./node_modules/animejs/lib/anime.es.js");
 
 function GameView(game, ctx, options) {
   this.ctx = ctx;
@@ -2396,35 +9063,6 @@ module.exports = Util;
 /******/ 	}
 /******/ 	
 /************************************************************************/
-/******/ 	/* webpack/runtime/define property getters */
-/******/ 	(() => {
-/******/ 		// define getter functions for harmony exports
-/******/ 		__webpack_require__.d = (exports, definition) => {
-/******/ 			for(var key in definition) {
-/******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
-/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
-/******/ 				}
-/******/ 			}
-/******/ 		};
-/******/ 	})();
-/******/ 	
-/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
-/******/ 	(() => {
-/******/ 		__webpack_require__.o = (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop)
-/******/ 	})();
-/******/ 	
-/******/ 	/* webpack/runtime/make namespace object */
-/******/ 	(() => {
-/******/ 		// define __esModule on exports
-/******/ 		__webpack_require__.r = (exports) => {
-/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
-/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-/******/ 			}
-/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
-/******/ 		};
-/******/ 	})();
-/******/ 	
-/************************************************************************/
 (() => {
 /*!**********************!*\
   !*** ./src/index.js ***!
@@ -2434,6 +9072,26 @@ module.exports = Util;
 var Game = __webpack_require__(/*! ./game */ "./src/game.js");
 
 var GameView = __webpack_require__(/*! ./game_view */ "./src/game_view.js");
+
+var Beatmap1 = __webpack_require__(/*! ./assets/beatmaps/beatmap1 */ "./src/assets/beatmaps/beatmap1.js");
+
+var Beatmap2 = __webpack_require__(/*! ./assets/beatmaps/beatmap2 */ "./src/assets/beatmaps/beatmap2.js");
+
+var Beatmap3 = __webpack_require__(/*! ./assets/beatmaps/beatmap3 */ "./src/assets/beatmaps/beatmap3.js");
+
+var Beatmap4 = __webpack_require__(/*! ./assets/beatmaps/beatmap4 */ "./src/assets/beatmaps/beatmap4.js");
+
+var Beatmap5 = __webpack_require__(/*! ./assets/beatmaps/beatmap5 */ "./src/assets/beatmaps/beatmap5.js");
+
+var Beatmap6 = __webpack_require__(/*! ./assets/beatmaps/beatmap6 */ "./src/assets/beatmaps/beatmap6.js");
+
+var Beatmap7 = __webpack_require__(/*! ./assets/beatmaps/beatmap7 */ "./src/assets/beatmaps/beatmap7.js");
+
+var Beatmap8 = __webpack_require__(/*! ./assets/beatmaps/beatmap8 */ "./src/assets/beatmaps/beatmap8.js");
+
+var Beatmap9 = __webpack_require__(/*! ./assets/beatmaps/beatmap9 */ "./src/assets/beatmaps/beatmap9.js");
+
+var Beatmap10 = __webpack_require__(/*! ./assets/beatmaps/beatmap10 */ "./src/assets/beatmaps/beatmap10.js");
 
 document.addEventListener("DOMContentLoaded", function () {
   var startMenu = document.querySelector(".start-menu");
@@ -2499,7 +9157,7 @@ document.addEventListener("DOMContentLoaded", function () {
   var maxLeft = (songCount - 1) * 100 * -1;
   var current = 0;
   var audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
-  ;
+  var beatmap = Beatmap1;
 
   function changeSong() {
     var next = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : true;
@@ -2514,33 +9172,43 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (current === 0) {
       canvasElement.className = "song-choice-1";
+      beatmap = Beatmap1;
       audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
     } else if (current === -100) {
       canvasElement.className = "song-choice-2";
+      beatmap = Beatmap2;
       audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
     } else if (current === -200) {
       canvasElement.className = "song-choice-3";
+      beatmap = Beatmap3;
       audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
     } else if (current === -300) {
       canvasElement.className = "song-choice-4";
+      beatmap = Beatmap4;
       audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
     } else if (current === -400) {
       canvasElement.className = "song-choice-5";
+      beatmap = Beatmap5;
       audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
     } else if (current === -500) {
       canvasElement.className = "song-choice-6";
+      beatmap = Beatmap6;
       audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
     } else if (current === -600) {
       canvasElement.className = "song-choice-7";
+      beatmap = Beatmap7;
       audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
     } else if (current === -700) {
       canvasElement.className = "song-choice-8";
+      beatmap = Beatmap8;
       audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
     } else if (current === -800) {
       canvasElement.className = "song-choice-9";
+      beatmap = Beatmap9;
       audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
     } else if (current === -900) {
       canvasElement.className = "song-choice-10";
+      beatmap = Beatmap10;
       audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
     }
   } // let autoChange = setInterval(changeSong, delay);
@@ -2641,12 +9309,12 @@ document.addEventListener("DOMContentLoaded", function () {
     startMenu.classList.add("hidden");
     songsMenu.classList.add("hidden");
     gameContainer.classList.remove("hidden");
-    var game = new Game();
-    var options = {
+    var game = new Game(beatmap);
+    var gv_options = {
       audioURL: audioURL,
       volume: volumeLvl
     };
-    var gameview = new GameView(game, ctx, options).start();
+    var gameview = new GameView(game, ctx, gv_options).start();
   });
 });
 })();
