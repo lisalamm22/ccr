@@ -26,13 +26,13 @@ document.addEventListener("DOMContentLoaded", function () {
     delay: anime.stagger(1000)
   });
 
-  anime({
-    targets:".title",
-    scale: 1.02,
-    direction: "alternate",
-    easing: 'easeInOutSine',
-    loop: true,
-  })
+  // anime({
+  //   targets:".title",
+  //   scale: 1.02,
+  //   direction: "alternate",
+  //   easing: 'easeInOutSine',
+  //   loop: true,
+  // })
 
   //volume
   let volumeLvl;
@@ -63,13 +63,13 @@ document.addEventListener("DOMContentLoaded", function () {
     canvasElement.className = "song-choice-1";
     // startButton.disabled = true;
   });
-  anime({
-    targets: "#start-btn",
-    scale: 1.1,
-    direction: "alternate",
-    easing: 'easeInOutSine',
-    loop: true,
-  })
+  // anime({
+  //   targets: "#start-btn",
+  //   scale: 1.1,
+  //   direction: "alternate",
+  //   easing: 'easeInOutSine',
+  //   loop: true,
+  // })
 
   // const delay = 3000; //ms
 

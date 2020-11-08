@@ -2455,14 +2455,14 @@ document.addEventListener("DOMContentLoaded", function () {
     easing: "easeInOutQuad",
     direction: "normal",
     delay: anime.stagger(1000)
-  });
-  anime({
-    targets: ".title",
-    scale: 1.02,
-    direction: "alternate",
-    easing: 'easeInOutSine',
-    loop: true
-  }); //volume
+  }); // anime({
+  //   targets:".title",
+  //   scale: 1.02,
+  //   direction: "alternate",
+  //   easing: 'easeInOutSine',
+  //   loop: true,
+  // })
+  //volume
 
   var volumeLvl;
   volumeButton.addEventListener("click", function () {
@@ -2485,14 +2485,14 @@ document.addEventListener("DOMContentLoaded", function () {
     songsMenu.classList.remove("hidden");
     gameContainer.classList.add("hidden");
     canvasElement.className = "song-choice-1"; // startButton.disabled = true;
-  });
-  anime({
-    targets: "#start-btn",
-    scale: 1.1,
-    direction: "alternate",
-    easing: 'easeInOutSine',
-    loop: true
-  }); // const delay = 3000; //ms
+  }); // anime({
+  //   targets: "#start-btn",
+  //   scale: 1.1,
+  //   direction: "alternate",
+  //   easing: 'easeInOutSine',
+  //   loop: true,
+  // })
+  // const delay = 3000; //ms
 
   var songs = document.querySelector(".song-options");
   var songCount = songs.childElementCount;
