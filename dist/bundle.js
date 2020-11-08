@@ -7,7 +7,6 @@
   \*****************************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module */
-/*! CommonJS bailout: module.exports is used directly at 521:0-14 */
 /***/ ((module) => {
 
 var Beatmap = [{
@@ -540,7 +539,6 @@ module.exports = Beatmap;
   \******************************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module */
-/*! CommonJS bailout: module.exports is used directly at 834:0-14 */
 /***/ ((module) => {
 
 //10 beat saber
@@ -1386,7 +1384,6 @@ module.exports = Beatmap;
   \*****************************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module */
-/*! CommonJS bailout: module.exports is used directly at 1037:0-14 */
 /***/ ((module) => {
 
 var Beatmap = [{
@@ -2435,7 +2432,6 @@ module.exports = Beatmap;
   \*****************************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module */
-/*! CommonJS bailout: module.exports is used directly at 717:0-14 */
 /***/ ((module) => {
 
 //3 dormir
@@ -3164,7 +3160,6 @@ module.exports = Beatmap;
   \*****************************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module */
-/*! CommonJS bailout: module.exports is used directly at 687:0-14 */
 /***/ ((module) => {
 
 //4 mario theme remix
@@ -3863,7 +3858,6 @@ module.exports = Beatmap;
   \*****************************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module */
-/*! CommonJS bailout: module.exports is used directly at 915:0-14 */
 /***/ ((module) => {
 
 //5 theory of eternity
@@ -4790,7 +4784,6 @@ module.exports = Beatmap;
   \*****************************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module */
-/*! CommonJS bailout: module.exports is used directly at 861:0-14 */
 /***/ ((module) => {
 
 //6 r3hab
@@ -5663,7 +5656,6 @@ module.exports = Beatmap;
   \*****************************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module */
-/*! CommonJS bailout: module.exports is used directly at 951:0-14 */
 /***/ ((module) => {
 
 //7 mononoke
@@ -6626,7 +6618,6 @@ module.exports = Beatmap;
   \*****************************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module */
-/*! CommonJS bailout: module.exports is used directly at 1023:0-14 */
 /***/ ((module) => {
 
 //8 polygon
@@ -7661,7 +7652,6 @@ module.exports = Beatmap;
   \*****************************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module */
-/*! CommonJS bailout: module.exports is used directly at 888:0-14 */
 /***/ ((module) => {
 
 //9 sunflower
@@ -8685,7 +8675,6 @@ module.exports = Beat;
   \*********************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
-/*! CommonJS bailout: module.exports is used directly at 66:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Beat = __webpack_require__(/*! ./beat */ "./src/beat.js");
@@ -8763,7 +8752,6 @@ module.exports = Game;
   \**************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
-/*! CommonJS bailout: module.exports is used directly at 254:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Util = __webpack_require__(/*! ./util */ "./src/util.js"); // const anime = require("animejs");
@@ -9167,7 +9155,7 @@ document.addEventListener("DOMContentLoaded", function () {
   var songCount = songs.childElementCount;
   var maxLeft = (songCount - 1) * 100 * -1;
   var current = 0;
-  var audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+  var audioURL = "./src/assets/sounds/1. Cut Your Teeth by Kyla La Grange (Kygo Remix).mp3";
   var beatmap = Beatmap1;
 
   function changeSong() {
@@ -9184,35 +9172,35 @@ document.addEventListener("DOMContentLoaded", function () {
     if (current === 0) {
       canvasElement.className = "song-choice-1";
       beatmap = Beatmap1;
-      audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+      audioURL = "./src/assets/sounds/1. Cut Your Teeth by Kyla La Grange (Kygo Remix).mp3";
     } else if (current === -100) {
       canvasElement.className = "song-choice-2";
       beatmap = Beatmap2;
-      audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+      audioURL = "./src/assets/sounds/2. トルコ行進曲 by T.M. Orchestra.mp3";
     } else if (current === -200) {
       canvasElement.className = "song-choice-3";
       beatmap = Beatmap3;
-      audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+      audioURL = "./src/assets/sounds/3. さよならトリップ by Dormir.mp3";
     } else if (current === -300) {
       canvasElement.className = "song-choice-4";
       beatmap = Beatmap4;
-      audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+      audioURL = "./src/assets/sounds/4. Mario Brothers Theme.mp3";
     } else if (current === -400) {
       canvasElement.className = "song-choice-5";
       beatmap = Beatmap5;
-      audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+      audioURL = "./src/assets/sounds/5. Theory of Eternity by TAG.mp3";
     } else if (current === -500) {
       canvasElement.className = "song-choice-6";
       beatmap = Beatmap6;
-      audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+      audioURL = "./src/assets/sounds/6. Don't Give Up On Me Now by R3HAB and Julie Bergan.mp3";
     } else if (current === -600) {
       canvasElement.className = "song-choice-7";
       beatmap = Beatmap7;
-      audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+      audioURL = "./src/assets/sounds/7. もののけ姫 by 新井大樹.mp3";
     } else if (current === -700) {
       canvasElement.className = "song-choice-8";
       beatmap = Beatmap8;
-      audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+      audioURL = "./src/assets/sounds/8. Polygon by Sota Fujimori.mp3";
     } else if (current === -800) {
       canvasElement.className = "song-choice-9";
       beatmap = Beatmap9;
@@ -9220,7 +9208,7 @@ document.addEventListener("DOMContentLoaded", function () {
     } else if (current === -900) {
       canvasElement.className = "song-choice-10";
       beatmap = Beatmap10;
-      audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+      audioURL = "./src/assets/sounds/10. Country Rounds by Kings & Folks (Sqeepo Remix) .mp3";
     }
   } // let autoChange = setInterval(changeSong, delay);
   // const restart = function () {

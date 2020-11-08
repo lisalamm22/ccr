@@ -88,7 +88,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const maxLeft = (songCount - 1) * 100 * -1;
 
   let current = 0;
-  let audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+  let audioURL = "./src/assets/sounds/1. Cut Your Teeth by Kyla La Grange (Kygo Remix).mp3";
   let beatmap = Beatmap1;
   function changeSong(next = true) {
     if (next) {
@@ -102,49 +102,49 @@ document.addEventListener("DOMContentLoaded", function () {
       canvasElement.className = "song-choice-1";
       beatmap = Beatmap1;
       audioURL =
-        "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+        "./src/assets/sounds/1. Cut Your Teeth by Kyla La Grange (Kygo Remix).mp3";
     }
     else if(current === -100){
       canvasElement.className = "song-choice-2";
       beatmap = Beatmap2;
       audioURL =
-        "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+        "./src/assets/sounds/2. トルコ行進曲 by T.M. Orchestra.mp3";
     }
     else if(current === -200){
       canvasElement.className = "song-choice-3";
       beatmap = Beatmap3;
       audioURL =
-        "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+        "./src/assets/sounds/3. さよならトリップ by Dormir.mp3";
     }
     else if(current === -300){
       canvasElement.className = "song-choice-4";
       beatmap = Beatmap4;
       audioURL =
-        "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+        "./src/assets/sounds/4. Mario Brothers Theme.mp3";
     }
     else if(current === -400){
       canvasElement.className = "song-choice-5";
       beatmap = Beatmap5;
       audioURL =
-        "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+        "./src/assets/sounds/5. Theory of Eternity by TAG.mp3";
     }
     else if(current === -500){
       canvasElement.className = "song-choice-6";
       beatmap = Beatmap6;
       audioURL =
-        "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+        "./src/assets/sounds/6. Don't Give Up On Me Now by R3HAB and Julie Bergan.mp3";
     }
     else if(current === -600){
       canvasElement.className = "song-choice-7";
       beatmap = Beatmap7;
       audioURL =
-        "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+        "./src/assets/sounds/7. もののけ姫 by 新井大樹.mp3";
     }
     else if(current === -700){
       canvasElement.className = "song-choice-8";
       beatmap = Beatmap8;
       audioURL =
-        "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+        "./src/assets/sounds/8. Polygon by Sota Fujimori.mp3";
     }
     else if(current === -800){
       canvasElement.className = "song-choice-9";
@@ -156,7 +156,7 @@ document.addEventListener("DOMContentLoaded", function () {
       canvasElement.className = "song-choice-10";
       beatmap = Beatmap10;
       audioURL =
-        "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+        "./src/assets/sounds/10. Country Rounds by Kings & Folks (Sqeepo Remix) .mp3";
     }
   }
 
