@@ -2435,8 +2435,6 @@ var Game = __webpack_require__(/*! ./game */ "./src/game.js");
 
 var GameView = __webpack_require__(/*! ./game_view */ "./src/game_view.js");
 
-var Beat = __webpack_require__(/*! ./beat */ "./src/beat.js");
-
 document.addEventListener("DOMContentLoaded", function () {
   var startMenu = document.querySelector(".start-menu");
   var startButton = document.getElementById("start-btn");
@@ -2450,10 +2448,22 @@ document.addEventListener("DOMContentLoaded", function () {
   var gameContainer = document.querySelector(".game");
   var canvasElement = document.getElementById("game-canvas");
   var ctx = canvasElement.getContext("2d");
-  window.ctx = ctx; //set game area
+  window.ctx = ctx;
+  anime({
+    targets: ".start-option",
+    width: "100%",
+    easing: "easeInOutQuad",
+    direction: "normal",
+    delay: anime.stagger(1000)
+  });
+  anime({
+    targets: ".title",
+    scale: 1.02,
+    direction: "alternate",
+    easing: 'easeInOutSine',
+    loop: true
+  }); //volume
 
-  canvasElement.width = window.innerWidth;
-  canvasElement.height = window.innerHeight;
   var volumeLvl;
   volumeButton.addEventListener("click", function () {
     console.log("volume-pop-up");
@@ -2468,24 +2478,28 @@ document.addEventListener("DOMContentLoaded", function () {
   });
   instructButton.addEventListener("click", function () {
     console.log("instructions");
-  });
+  }); //song selection
+
   songsButton.addEventListener("click", function () {
     startMenu.classList.add("hidden");
     songsMenu.classList.remove("hidden");
     gameContainer.classList.add("hidden");
-    startButton.disabled = true; // anime({
-    //   targets: ".song-option",
-    //   width: "100%",
-    //   easing: "easeInOutQuad",
-    //   direction: "normal",
-    //   delay: anime.stagger(1000)
-    // });
+    canvasElement.className = "song-choice-1"; // startButton.disabled = true;
+  });
+  anime({
+    targets: "#start-btn",
+    scale: 1.1,
+    direction: "alternate",
+    easing: 'easeInOutSine',
+    loop: true
   }); // const delay = 3000; //ms
 
   var songs = document.querySelector(".song-options");
   var songCount = songs.childElementCount;
   var maxLeft = (songCount - 1) * 100 * -1;
   var current = 0;
+  var audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+  ;
 
   function changeSong() {
     var next = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : true;
@@ -2497,6 +2511,38 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     songs.style.left = current + "%";
+
+    if (current === 0) {
+      canvasElement.className = "song-choice-1";
+      audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+    } else if (current === -100) {
+      canvasElement.className = "song-choice-2";
+      audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+    } else if (current === -200) {
+      canvasElement.className = "song-choice-3";
+      audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+    } else if (current === -300) {
+      canvasElement.className = "song-choice-4";
+      audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+    } else if (current === -400) {
+      canvasElement.className = "song-choice-5";
+      audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+    } else if (current === -500) {
+      canvasElement.className = "song-choice-6";
+      audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+    } else if (current === -600) {
+      canvasElement.className = "song-choice-7";
+      audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+    } else if (current === -700) {
+      canvasElement.className = "song-choice-8";
+      audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+    } else if (current === -800) {
+      canvasElement.className = "song-choice-9";
+      audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+    } else if (current === -900) {
+      canvasElement.className = "song-choice-10";
+      audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+    }
   } // let autoChange = setInterval(changeSong, delay);
   // const restart = function () {
   //   clearInterval(autoChange);
@@ -2512,74 +2558,73 @@ document.addEventListener("DOMContentLoaded", function () {
   prevSongButton.addEventListener("click", function () {
     changeSong(false); // restart();
   });
-  var audioURL;
   var song1 = document.getElementById("song1");
   song1.addEventListener("click", function () {
-    canvasElement.className = "song-choice-1";
-    startButton.disabled = false;
+    canvasElement.className = "song-choice-1"; // startButton.disabled = false;
+
     audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
     console.log("1");
   });
   var song2 = document.getElementById("song2");
   song2.addEventListener("click", function () {
-    canvasElement.className = "song-choice-2";
-    startButton.disabled = false;
+    canvasElement.className = "song-choice-2"; // startButton.disabled = false;
+
     audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
     console.log("2");
   });
   var song3 = document.getElementById("song3");
   song3.addEventListener("click", function () {
-    canvasElement.className = "song-choice-3";
-    startButton.disabled = false;
+    canvasElement.className = "song-choice-3"; // startButton.disabled = false;
+
     audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
     console.log("3");
   });
   var song4 = document.getElementById("song4");
   song4.addEventListener("click", function () {
-    canvasElement.className = "song-choice-4";
-    startButton.disabled = false;
+    canvasElement.className = "song-choice-4"; // startButton.disabled = false;
+
     audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
     console.log("4");
   });
   var song5 = document.getElementById("song5");
   song5.addEventListener("click", function () {
-    canvasElement.className = "song-choice-5";
-    startButton.disabled = false;
+    canvasElement.className = "song-choice-5"; // startButton.disabled = false;
+
     audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
     console.log("5");
   });
   var song6 = document.getElementById("song6");
   song6.addEventListener("click", function () {
-    canvasElement.className = "song-choice-6";
-    startButton.disabled = false;
+    canvasElement.className = "song-choice-6"; // startButton.disabled = false;
+
     audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
     console.log("6");
   });
   var song7 = document.getElementById("song7");
   song7.addEventListener("click", function () {
-    canvasElement.className = "song-choice-7";
-    startButton.disabled = false;
+    canvasElement.className = "song-choice-7"; // startButton.disabled = false;
+
     audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
     console.log("7");
   });
   var song8 = document.getElementById("song8");
   song8.addEventListener("click", function () {
-    canvasElement.className = "song-choice-8";
-    startButton.disabled = false;
+    canvasElement.className = "song-choice-8"; // startButton.disabled = false;
+
     audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
     console.log("8");
   });
   var song9 = document.getElementById("song9");
   song9.addEventListener("click", function () {
-    canvasElement.className = "song-choice-9";
-    startButton.disabled = false;
+    canvasElement.className = "song-choice-9"; // startButton.disabled = false;
+
     audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
     console.log("9");
   });
   var song10 = document.getElementById("song10");
   song10.addEventListener("click", function () {
-    canvasElement.className = "song-choice-10";
-    startButton.disabled = false;
+    canvasElement.className = "song-choice-10"; // startButton.disabled = false;
+
     audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
     console.log("10");
   });
@@ -2587,7 +2632,10 @@ document.addEventListener("DOMContentLoaded", function () {
     startMenu.classList.remove("hidden");
     songsMenu.classList.add("hidden");
     gameContainer.classList.add("hidden");
-  }); //start new game
+  }); //set game area
+
+  canvasElement.width = window.innerWidth;
+  canvasElement.height = window.innerHeight; //start new game
 
   startButton.addEventListener("click", function () {
     startMenu.classList.add("hidden");

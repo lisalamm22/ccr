@@ -4,15 +4,20 @@
     <title>Click Click Revolution</title>
     <link rel="stylesheet" type="text/css" href="./src/assets/stylesheets/gameview.css" />
     <script src="https://cdn.jsdelivr.net/npm/animejs@3.0.1/lib/anime.min.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Exo:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+        rel="stylesheet">
 </head>
 
 <body>
     <div class="start-menu">
-        <h1>Click Click Revolution</h1>
+        <div class="title">
+            <h1 class="title-text">Click Click Revolution</h1>
+        </div>
         <div class="start-options">
-            <button id="songs-btn">Songs</button>
-            <button id="instructions-btn">Instructions</button>
-            <button id="volume-btn">Volume</button>
+            <div id="songs-btn" class="start-option">Songs</div>
+            <div id="instructions-btn" class="start-option">Instructions</div>
+            <div id="volume-btn" class="start-option">Volume</div>
             <input type="range" id="volume-start" min="0" max="100">
         </div>
     </div>
@@ -21,33 +26,55 @@
         <div class="song-carousel">
             <div class="song-options">
                 <!-- <p>Please choose a song</p> -->
-                <div id="song1" class="song-option">Cut Your Teeth</div>
-                <div id="song2" class="song-option">トルコ行進曲 (Turkish March)</div>
-                <div id="song3" class="song-option">さよならトリップ (Goodbye Trip)</div>
-                <div id="song4" class="song-option">Mario Brothers Theme</div>
-                <div id="song5" class="song-option">Theory of Eternity</div>
-                <div id="song6" class="song-option">Don't Give Up On Me Now</div>
-                <div id="song7" class="song-option">もののけ姫(Princess Mononoke)</div>
-                <div id="song8" class="song-option">Polygon</div>
-                <div id="song9" class="song-option">Sunflower</div>
-                <div id="song10"class="song-option">Country Rounds</div>
+                <div id="song1" class="song-option">
+                    <p>Cut Your Teeth</p>
+                </div>
+                <div id="song2" class="song-option">
+                    <p>トルコ行進曲 (Turkish March)</p> 
+                </div>
+                <div id="song3" class="song-option">
+                    <p>さよならトリップ (Goodbye Trip)</p> 
+                </div>
+                <div id="song4" class="song-option">
+                    <p>Mario Brothers Theme</p> 
+                </div>
+                <div id="song5" class="song-option">
+                    <p>Theory of Eternity</p> 
+                </div>
+                <div id="song6" class="song-option">
+                    <p>Don't Give Up On Me Now</p> 
+                </div>
+                <div id="song7" class="song-option">
+                    <p>もののけ姫(Princess Mononoke)</p> 
+                </div>
+                <div id="song8" class="song-option">
+                    <p>Polygon</p> 
+                </div>
+                <div id="song9" class="song-option">
+                    <p>Sunflower</p> 
+                </div>
+                <div id="song10"class="song-option">
+                    <p>Country Rounds</p> 
+                </div>
             </div>
             <div class="controls">
-                <button id="prev-btn" class="control">&#9668;</button>
-                <button id="next-btn" class="control">&#9658;</button>
+                <div id="prev-btn" class="control">&#9668;</div>
+                <div id="next-btn" class="control">&#9658;</div>
             </div>
         </div>
         <div>
-            <button id="start-btn">Start</button>
-            <button id="start-menu-btn">Main Menu</button>
-            <button id="volume-btn">Volume</button>
+            <div id="start-btn">
+                <p>Start</p> 
+            </div>
+            <div id="start-menu-btn">Main Menu</div>
+            <div id="volume-btn">Volume</div>
             <input type="range" id="volume-songs" min="0" max="100">
         </div>
     </div>
     
     <div class="game hidden">
         <canvas id="game-canvas"></canvas>
-        <button id="volume-btn">Volume</button>
+        <div id="volume-btn">Volume</div>
         <input type="range" id="volume-GV" min="0" max="100">
     </div>
 
