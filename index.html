@@ -3,6 +3,7 @@
 <head>
     <title>Click Click Revolution</title>
     <link rel="stylesheet" type="text/css" href="./src/assets/stylesheets/gameview.css" />
+    <script src="https://cdn.jsdelivr.net/npm/animejs@3.0.1/lib/anime.min.js"></script>
 </head>
 
 <body>
@@ -17,23 +18,31 @@
     </div>
     
     <div class="songs-menu hidden">
-        <div class="song-options">
-            <p>Please choose a song</p>
-            <button id="song1" class="song-option">Cut Your Teeth</button>
-            <button id="song2" class="song-option">トルコ行進曲 (Turkish March)</button>
-            <button id="song3" class="song-option">さよならトリップ (Goodbye Trip)</button>
-            <button id="song4" class="song-option">Mario Brothers Theme</button>
-            <button id="song5" class="song-option">Theory of Eternity</button>
-            <button id="song6" class="song-option">Don't Give Up On Me Now</button>
-            <button id="song7" class="song-option">もののけ姫(Princess Mononoke)</button>
-            <button id="song8" class="song-option">Polygon</button>
-            <button id="song9" class="song-option">Sunflower</button>
-            <button id="song10"class="song-option">Country Rounds</button>
+        <div class="song-carousel">
+            <div class="song-options">
+                <!-- <p>Please choose a song</p> -->
+                <div id="song1" class="song-option">Cut Your Teeth</div>
+                <div id="song2" class="song-option">トルコ行進曲 (Turkish March)</div>
+                <div id="song3" class="song-option">さよならトリップ (Goodbye Trip)</div>
+                <div id="song4" class="song-option">Mario Brothers Theme</div>
+                <div id="song5" class="song-option">Theory of Eternity</div>
+                <div id="song6" class="song-option">Don't Give Up On Me Now</div>
+                <div id="song7" class="song-option">もののけ姫(Princess Mononoke)</div>
+                <div id="song8" class="song-option">Polygon</div>
+                <div id="song9" class="song-option">Sunflower</div>
+                <div id="song10"class="song-option">Country Rounds</div>
+            </div>
+            <div class="controls">
+                <button id="prev-btn" class="control">&#9668;</button>
+                <button id="next-btn" class="control">&#9658;</button>
+            </div>
         </div>
-        <button id="start-btn">Start</button>
-        <button id="start-menu-btn">Main Menu</button>
-        <button id="volume-btn">Volume</button>
-        <input type="range" id="volume-songs" min="0" max="100">
+        <div>
+            <button id="start-btn">Start</button>
+            <button id="start-menu-btn">Main Menu</button>
+            <button id="volume-btn">Volume</button>
+            <input type="range" id="volume-songs" min="0" max="100">
+        </div>
     </div>
     
     <div class="game hidden">
