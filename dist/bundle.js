@@ -1460,6 +1460,7 @@ module.exports = Beat;
   \*********************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 614:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Beat = __webpack_require__(/*! ./beat */ "./src/beat.js");
@@ -2085,6 +2086,7 @@ module.exports = Game;
   \**************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 255:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Util = __webpack_require__(/*! ./util */ "./src/util.js");
