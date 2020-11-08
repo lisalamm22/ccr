@@ -16,12 +16,15 @@ document.addEventListener("DOMContentLoaded", function () {
   const startButton = document.getElementById("start-btn");
   const songsButton = document.getElementById("songs-btn");
   const instructButton = document.getElementById("instructions-btn");
-  const volumeButton = document.getElementById("volume-btn");
+  const volumeButtonStart = document.getElementById("volume-btn-start");
   const volumeInputStart = document.getElementById("volume-start");
-
+  const muteButtonStart = document.querySelector(".mute")
+  
   const songsMenu = document.querySelector(".songs-menu");
   const startMenuButton = document.getElementById("start-menu-btn");
+  const volumeButtonSongs = document.getElementById("volume-btn-songs");
   const volumeInputSongs = document.getElementById("volume-songs");
+  const muteButtonSongs = document.getElementById("mute-songs")
 
   const gameContainer = document.querySelector(".game");
   const canvasElement = document.getElementById("game-canvas");
@@ -33,7 +36,7 @@ document.addEventListener("DOMContentLoaded", function () {
     width: "100%",
     easing: "easeInOutQuad",
     direction: "normal",
-    delay: anime.stagger(1000)
+    delay: anime.stagger(500)
   });
 
   // anime({
@@ -45,20 +48,67 @@ document.addEventListener("DOMContentLoaded", function () {
   // })
 
   //volume
-  let volumeLvl;
+  let volumeLvl=50;
+  let mute = false;
 
-  volumeButton.addEventListener("click", () => {
-    console.log("volume-pop-up");
+  volumeButtonStart.addEventListener("click", () => {
+    console.log("in volume event")
+    if(volumeInputStart.className === "hidden"){
+      volumeInputStart.classList.remove("hidden")
+      muteButtonStart.classList.remove("hidden")
+    }
+    else{
+      volumeInputStart.classList.add("hidden")
+      muteButtonStart.classList.add("hidden")
+    }
   });
+
+  muteButtonStart.addEventListener("click", ()=> {
+    if(!mute){
+      mute = true;
+      volumeInputStart.value = 0;
+      volumeInputSongs.value = 0;
+    }
+    else{
+      mute = false;
+      volumeInputStart.value = volumeLvl
+      volumeInputSongs.value = volumeLvl
+    }
+  })
 
   volumeInputStart.addEventListener("change", (e) => {
     volumeLvl = e.target.value;
     volumeInputSongs.value = volumeLvl;
   });
 
+  volumeButtonSongs.addEventListener("click", () => {
+    if(volumeInputSongs.className === "hidden"){
+      volumeInputSongs.className = ""
+      muteButtonSongs.classList.remove("hidden")
+    }
+    else{
+      volumeInputSongs.className="hidden"
+      muteButtonSongs.classList.add("hidden")
+    }
+  });
+
+  muteButtonSongs.addEventListener("click", () => {
+    if (!mute) {
+      mute = true;
+      volumeInputStart.value = 0;
+      volumeInputSongs.value = 0;
+    }
+    else {
+      mute = false;
+      volumeInputStart.value = volumeLvl
+      volumeInputSongs.value = volumeLvl
+    }
+  })
+
   volumeInputSongs.addEventListener("change", (e) => {
     volumeLvl = e.target.value;
     volumeInputStart.value = volumeLvl;
+    // volumeInputSongs.className = "hidden"
   });
 
   instructButton.addEventListener("click", () => {
@@ -71,7 +121,11 @@ document.addEventListener("DOMContentLoaded", function () {
     songsMenu.classList.remove("hidden");
     gameContainer.classList.add("hidden");
     canvasElement.className = "song-choice-1";
-    // startButton.disabled = true;
+    anime({
+      targets: ".start-option",
+      width: "0%",
+      direction: "normal",
+    });
   });
   // anime({
   //   targets: "#start-btn",
@@ -178,93 +232,17 @@ document.addEventListener("DOMContentLoaded", function () {
     // restart();
   });
 
-  
-
-  const song1 = document.getElementById("song1");
-  song1.addEventListener("click", () => {
-    canvasElement.className = "song-choice-1";
-    // startButton.disabled = false;
-    audioURL =
-      "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
-    console.log("1");
-  });
-  const song2 = document.getElementById("song2");
-  song2.addEventListener("click", () => {
-    canvasElement.className = "song-choice-2";
-    // startButton.disabled = false;
-    audioURL =
-      "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
-    console.log("2");
-  });
-  const song3 = document.getElementById("song3");
-  song3.addEventListener("click", () => {
-    canvasElement.className = "song-choice-3";
-    // startButton.disabled = false;
-    audioURL =
-      "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
-    console.log("3");
-  });
-  const song4 = document.getElementById("song4");
-  song4.addEventListener("click", () => {
-    canvasElement.className = "song-choice-4";
-    // startButton.disabled = false;
-    audioURL =
-      "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
-    console.log("4");
-  });
-  const song5 = document.getElementById("song5");
-  song5.addEventListener("click", () => {
-    canvasElement.className = "song-choice-5";
-    // startButton.disabled = false;
-    audioURL =
-      "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
-    console.log("5");
-  });
-  const song6 = document.getElementById("song6");
-  song6.addEventListener("click", () => {
-    canvasElement.className = "song-choice-6";
-    // startButton.disabled = false;
-    audioURL =
-      "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
-    console.log("6");
-  });
-  const song7 = document.getElementById("song7");
-  song7.addEventListener("click", () => {
-    canvasElement.className = "song-choice-7";
-    // startButton.disabled = false;
-    audioURL =
-      "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
-    console.log("7");
-  });
-  const song8 = document.getElementById("song8");
-  song8.addEventListener("click", () => {
-    canvasElement.className = "song-choice-8";
-    // startButton.disabled = false;
-    audioURL =
-      "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
-    console.log("8");
-  });
-  const song9 = document.getElementById("song9");
-  song9.addEventListener("click", () => {
-    canvasElement.className = "song-choice-9";
-    // startButton.disabled = false;
-    audioURL =
-      "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
-    console.log("9");
-  });
-  const song10 = document.getElementById("song10");
-  song10.addEventListener("click", () => {
-    canvasElement.className = "song-choice-10";
-    // startButton.disabled = false;
-    audioURL =
-      "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
-    console.log("10");
-  });
-
   startMenuButton.addEventListener("click", () => {
     startMenu.classList.remove("hidden");
     songsMenu.classList.add("hidden");
     gameContainer.classList.add("hidden");
+    anime({
+      targets: ".start-option",
+      width: "100%",
+      easing: "easeInOutQuad",
+      direction: "normal",
+      delay: anime.stagger(1000)
+    });
   });
 
   //set game area
@@ -279,7 +257,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const game = new Game(beatmap);
     let gv_options = {
       audioURL: audioURL,
-      volume: volumeLvl,
+      volume: mute ? 0 : volumeLvl,
     };
     const gameview = new GameView(game, ctx, gv_options).start();
   });

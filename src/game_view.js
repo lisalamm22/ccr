@@ -10,7 +10,7 @@ function GameView(game, ctx, options) {
   this.hitBeats = {};
   this.score = 0;
   this.audioURL = options.audioURL;
-  this.volume = (options.volume/100) || 0.5
+  this.volume = (options.volume/100)
 
   //create audio for game
   this.audioObj = new Audio(this.audioURL);
@@ -231,7 +231,7 @@ GameView.prototype.start = function start() {
 
 GameView.prototype.animate = function animate(time) {
     this.lastTime = time - this.startTime;
-
+    document.getElementById("time").innerHTML = Math.floor(this.lastTime);
     this.game.draw(this.ctx);
     if (this.game.beats.length !== 0) {
         this.game.beats.forEach((beat, idx) => {

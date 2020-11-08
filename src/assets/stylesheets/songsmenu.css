@@ -6,6 +6,8 @@
   align-items: center;
   flex-direction: column;
   background-color: black;
+  background-image: url("../images/startmenuBG.jpg");
+  background-size: cover;
 }
 .song-carousel {
   width: 75vw;
@@ -14,6 +16,7 @@
   overflow: hidden;
   position: relative;
   box-shadow: 0 4px 20px -2px rgba(255, 255, 255, 0.2);
+  opacity: .9;
 }
   
 .song-carousel:hover .controls {
@@ -80,16 +83,18 @@
 }
 
 .song-menu-nav{
+  width: 75%;
+  display: flex;
+  justify-content: space-evenly;
+  align-items: flex-end;
   position: relative;
-  width: 100%;
-  height: 10%;
+  top: -20px;
 }
 
 .button{
   background: pink;
   border: white solid 8px;
   border-radius: 50%;
-  position: absolute;
   color: white;
   text-transform: uppercase;
   font-weight: 700;
@@ -98,11 +103,12 @@
   justify-content: center;
   height: 100px;
   width:100px;
-  top: 50%;
 }
 
-.button:hover {
+.button:hover,
+.small-button:hover {
   cursor: pointer;
+  transform: scale(1.1)
 }
 
 .button p{
@@ -112,23 +118,61 @@
 
 #start-btn{
   box-shadow: 0 0px 30px 10px rgba(255, 255, 255, 0.5);
-  left: 50%;
-  transform: scale(1.5);
+  height: 150px;
+  width: 150px;
 }
 
-#start-menu-btn{
-  /* top: 50%; */
-  left: 30%;
+#start-btn p{
+  font-size: 4vh;
 }
 
-#volume-btn{
-  /* top: 50%; */
-  left: 70%;
+.volume-container{
+  display: flex;
+  position: relative;
 }
 
-#volume-btn input{
-  display: none
+#volume-songs{
+  position: absolute;
+  left: 120%;
+  top: 42%;
 }
+
+input[type=range] {
+  width: 100%;
+  margin: 5px 0;
+  background-color: transparent;
+  -webkit-appearance: none;
+}
+input[type=range]:focus {
+  outline: none;
+}
+input[type=range]::-webkit-slider-runnable-track {
+  background: #ffc0cb;
+  border: 0;
+  border-radius: 25px;
+  width: 100%;
+  height: 10px;
+  cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  margin-top: -5px;
+  width: 20px;
+  height: 20px;
+  background: #ffffff;
+  border: 1px solid #ffffff;
+  border-radius: 10px;
+  cursor: pointer;
+  -webkit-appearance: none;
+}
+input[type=range]:focus::-webkit-slider-runnable-track {
+  background: #ffdae0;
+}
+
+#mute-songs{
+  bottom: -15%;
+  right: -15%;
+}
+
 
 #song1{
   background-image: url("../images/1.jpg");

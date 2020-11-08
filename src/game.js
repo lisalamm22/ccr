@@ -20,7 +20,7 @@ Game.prototype.draw = function draw(ctx) {
 
 Game.prototype.checkSeq = function checkSeq(){
     let count = 1
-    const downTime = 1000
+    const downTime = 5000
     this.beatmap.forEach((beat, idx) => {
         if(idx === 0){
             let nextBeat = this.beatmap[idx+1]

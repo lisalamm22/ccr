@@ -19,8 +19,15 @@
         <div class="start-options">
             <div id="songs-btn" class="start-option">Songs</div>
             <div id="instructions-btn" class="start-option">Instructions</div>
-            <div id="volume-btn" class="start-option">Volume</div>
-            <input type="range" id="volume-start" min="0" max="100">
+            <div class="volume-container start-option">
+                <div id="volume-btn-start">
+                    <p>Volume</p> 
+                </div>
+                <input type="range" id="volume-start" class="hidden" min="0" max="100">
+                <div class="mute small-button hidden">
+                    <p>Mute</p> 
+                </div>
+            </div>
         </div>
     </div>
     
@@ -57,6 +64,7 @@
                 </div>
                 <div id="song10"class="song-option">
                     <p>Country Rounds</p> 
+                    <!-- <p>Difficulty: </p> -->
                 </div>
             </div>
             <div class="controls">
@@ -65,21 +73,27 @@
             </div>
         </div>
         <div class="song-menu-nav">
-            <div id="start-btn" class="button">
-                <p class="button-txt">Start</p> 
-            </div>
             <div id="start-menu-btn" class="button">
                 <p class="button-txt">Main Menu</p> 
             </div>
-            <div id="volume-btn" class="button">
-                <p class="button-txt">Volume</p>
-                <input type="range" id="volume-songs" min="0" max="100">
+            <div id="start-btn" class="button">
+                <p class="button-txt">Start</p> 
+            </div>
+            <div class="volume-container">
+                <div id="volume-btn-songs" class="button">
+                    <p class="button-txt">Volume</p>
+                </div>
+                <input type="range" id="volume-songs" class="hidden" min="0" max="100">
+                <div id="mute-songs" class="mute small-button hidden">
+                    <p>Mute</p>
+                </div>
             </div>
         </div>
     </div>
     
     <div class="game hidden">
         <canvas id="game-canvas"></canvas>
+        <p id="time"></p>
         <div id="volume-btn">Volume</div>
         <input type="range" id="volume-GV" min="0" max="100">
     </div>
