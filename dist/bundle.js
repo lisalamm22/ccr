@@ -2470,10 +2470,47 @@ document.addEventListener("DOMContentLoaded", function () {
     console.log("instructions");
   });
   songsButton.addEventListener("click", function () {
-    startMenu.classList.add('hidden');
-    songsMenu.classList.remove('hidden');
-    gameContainer.classList.add('hidden');
-    startButton.disabled = true;
+    startMenu.classList.add("hidden");
+    songsMenu.classList.remove("hidden");
+    gameContainer.classList.add("hidden");
+    startButton.disabled = true; // anime({
+    //   targets: ".song-option",
+    //   width: "100%",
+    //   easing: "easeInOutQuad",
+    //   direction: "normal",
+    //   delay: anime.stagger(1000)
+    // });
+  }); // const delay = 3000; //ms
+
+  var songs = document.querySelector(".song-options");
+  var songCount = songs.childElementCount;
+  var maxLeft = (songCount - 1) * 100 * -1;
+  var current = 0;
+
+  function changeSong() {
+    var next = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : true;
+
+    if (next) {
+      current += current > maxLeft ? -100 : current * -1;
+    } else {
+      current = current < 0 ? current + 100 : maxLeft;
+    }
+
+    songs.style.left = current + "%";
+  } // let autoChange = setInterval(changeSong, delay);
+  // const restart = function () {
+  //   clearInterval(autoChange);
+  //   autoChange = setInterval(changeSong, delay);
+  // };
+
+
+  var nextSongButton = document.getElementById("next-btn");
+  nextSongButton.addEventListener("click", function () {
+    changeSong(); // restart();
+  });
+  var prevSongButton = document.getElementById("prev-btn");
+  prevSongButton.addEventListener("click", function () {
+    changeSong(false); // restart();
   });
   var audioURL;
   var song1 = document.getElementById("song1");
@@ -2547,15 +2584,15 @@ document.addEventListener("DOMContentLoaded", function () {
     console.log("10");
   });
   startMenuButton.addEventListener("click", function () {
-    startMenu.classList.remove('hidden');
-    songsMenu.classList.add('hidden');
-    gameContainer.classList.add('hidden');
+    startMenu.classList.remove("hidden");
+    songsMenu.classList.add("hidden");
+    gameContainer.classList.add("hidden");
   }); //start new game
 
   startButton.addEventListener("click", function () {
-    startMenu.classList.add('hidden');
-    songsMenu.classList.add('hidden');
-    gameContainer.classList.remove('hidden');
+    startMenu.classList.add("hidden");
+    songsMenu.classList.add("hidden");
+    gameContainer.classList.remove("hidden");
     var game = new Game();
     var options = {
       audioURL: audioURL,
