@@ -59,6 +59,49 @@
   transform: scale(1.1);
 }
 
+#instructions{
+  position: absolute;
+  width: 75vw;
+  height: 75vh;
+  font-size: 20px;
+  color: white;
+  font-weight: 500;
+  background: black;
+  background-image: url("../images/osu_tutorial.png");
+  background-size: auto;
+  z-index: 4;
+  top: -25%;
+  left: -125%;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: .9;
+}
+
+#instructions>p:first-child{
+  position: absolute;
+  width: 25%;
+  left: 55%;
+  top: 35%;
+}
+#instructions>p:nth-child(2){
+  position: absolute;
+  width: 25%;
+  left: 10%;
+  top: 10%;
+}
+#instructions>p:nth-child(3){
+  position: absolute;
+  width: 25%;
+  left: 10%;
+  top: 65%;
+}
+
+#instruct-done-btn{
+  position: absolute;
+  bottom: -5%;
+  right: -5%;
+}
+
 #volume-btn-start{
   color: white;
   font-size: 30px;

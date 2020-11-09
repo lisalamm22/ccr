@@ -47,7 +47,11 @@
   transition: ease .3s;
   cursor: pointer;
   outline: none;
-  font-size: 20px;
+  font-size: 25px;
+}
+
+#prev-btn{
+  font-size: 33px;
 }
       
 .song-carousel .controls .control:hover {

@@ -8681,7 +8681,6 @@ module.exports = Game;
   \**************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
-/*! CommonJS bailout: module.exports is used directly at 344:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Util = __webpack_require__(/*! ./util */ "./src/util.js"); // const anime = require("animejs");
@@ -9117,6 +9116,8 @@ document.addEventListener("DOMContentLoaded", function () {
   var startButton = document.getElementById("start-btn");
   var songsButton = document.getElementById("songs-btn");
   var instructButton = document.getElementById("instructions-btn");
+  var instructions = document.getElementById("instructions");
+  var instructionsDoneButton = document.getElementById("instruct-done-btn");
   var volumeButtonStart = document.getElementById("volume-btn-start");
   var volumeInputStart = document.getElementById("volume-start");
   var muteButtonStart = document.querySelector(".mute");
@@ -9204,6 +9205,12 @@ document.addEventListener("DOMContentLoaded", function () {
   });
   instructButton.addEventListener("click", function () {
     console.log("instructions");
+    instructions.classList.remove("hidden");
+    instructionsDoneButton.classList.remove("hidden");
+  });
+  instructionsDoneButton.addEventListener("click", function () {
+    instructions.classList.add("hidden");
+    instructionsDoneButton.classList.add("hidden");
   }); //song selection
 
   songsButton.addEventListener("click", function () {

@@ -16,6 +16,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const startButton = document.getElementById("start-btn");
   const songsButton = document.getElementById("songs-btn");
   const instructButton = document.getElementById("instructions-btn");
+  const instructions = document.getElementById("instructions");
+  const instructionsDoneButton = document.getElementById("instruct-done-btn");
   const volumeButtonStart = document.getElementById("volume-btn-start");
   const volumeInputStart = document.getElementById("volume-start");
   const muteButtonStart = document.querySelector(".mute")
@@ -120,7 +122,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
   instructButton.addEventListener("click", () => {
     console.log("instructions");
+    instructions.classList.remove("hidden")
+    instructionsDoneButton.classList.remove("hidden")
   });
+  
+  instructionsDoneButton.addEventListener("click", () => {
+    instructions.classList.add("hidden")
+    instructionsDoneButton.classList.add("hidden")
+  })
   
   //song selection
   songsButton.addEventListener("click", () => {
