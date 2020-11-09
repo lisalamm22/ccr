@@ -26,6 +26,9 @@ document.addEventListener("DOMContentLoaded", function () {
   const volumeInputSongs = document.getElementById("volume-songs");
   const muteButtonSongs = document.getElementById("mute-songs")
 
+  const volumeButtonGame = document.getElementById("volume-btn-GV");
+  const volumeInputGame = document.getElementById("volume-GV");
+  const muteButtonGame = document.getElementById("mute-GV")
   const gameContainer = document.querySelector(".game");
   const canvasElement = document.getElementById("game-canvas");
   const ctx = canvasElement.getContext("2d");
@@ -68,11 +71,13 @@ document.addEventListener("DOMContentLoaded", function () {
       mute = true;
       volumeInputStart.value = 0;
       volumeInputSongs.value = 0;
+      volumeInputGame.value = 0;
     }
     else{
       mute = false;
       volumeInputStart.value = volumeLvl
       volumeInputSongs.value = volumeLvl
+      volumeInputGame.value = volumeLvl
     }
   })
 
@@ -97,11 +102,13 @@ document.addEventListener("DOMContentLoaded", function () {
       mute = true;
       volumeInputStart.value = 0;
       volumeInputSongs.value = 0;
+      volumeInputGame.value = 0;
     }
     else {
       mute = false;
       volumeInputStart.value = volumeLvl
       volumeInputSongs.value = volumeLvl
+      volumeInputGame.value = volumeLvl
     }
   })
 
@@ -257,7 +264,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const game = new Game(beatmap);
     let gv_options = {
       audioURL: audioURL,
-      volume: mute ? 0 : volumeLvl,
+      volume: volumeLvl,
+      mute: mute,
     };
     const gameview = new GameView(game, ctx, gv_options).start();
   });

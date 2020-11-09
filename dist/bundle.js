@@ -8681,6 +8681,7 @@ module.exports = Game;
   \**************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 287:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Util = __webpack_require__(/*! ./util */ "./src/util.js"); // const anime = require("animejs");
@@ -8695,10 +8696,11 @@ function GameView(game, ctx, options) {
   this.hitBeats = {};
   this.score = 0;
   this.audioURL = options.audioURL;
-  this.volume = options.volume / 100; //create audio for game
+  this.volume = options.volume / 100;
+  this.mute = options.mute; //create audio for game
 
   this.audioObj = new Audio(this.audioURL);
-  this.audioObj.volume = this.volume;
+  this.audioObj.volume = this.mute ? 0 : this.volume;
 }
 
 GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
@@ -8737,9 +8739,40 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
   window.addEventListener("mouseup", function (e) {
     _this.mousedown = false;
   });
-  var volumeInput = document.getElementById("volume-GV");
-  volumeInput.addEventListener("change", function (e) {
-    _this.audioObj.volume = e.target.value / 100;
+  var volumeButtonGame = document.getElementById("volume-btn-GV");
+  var volumeInputGame = document.getElementById("volume-GV");
+  var muteButtonGame = document.getElementById("mute-GV");
+  var volumeInputStart = document.getElementById("volume-start");
+  var volumeInputSongs = document.getElementById("volume-songs");
+  volumeButtonGame.addEventListener("click", function () {
+    console.log("in volume event");
+
+    if (volumeInputGame.className === "hidden") {
+      volumeInputGame.classList.remove("hidden");
+      muteButtonGame.classList.remove("hidden");
+    } else {
+      volumeInputGame.classList.add("hidden");
+      muteButtonGame.classList.add("hidden");
+    }
+  });
+  muteButtonGame.addEventListener("click", function () {
+    if (!_this.mute) {
+      _this.mute = true;
+      _this.audioObj.volume = 0;
+      volumeInputStart.value = 0;
+      volumeInputSongs.value = 0;
+      volumeInputGame.value = 0;
+    } else {
+      _this.mute = false;
+      _this.audioObj.volume = _this.volume;
+      volumeInputStart.value = _this.volume * 100;
+      volumeInputSongs.value = _this.volume * 100;
+      volumeInputGame.value = _this.volume * 100;
+    }
+  });
+  volumeInputGame.addEventListener("change", function (e) {
+    _this.volume = e.target.value / 100;
+    _this.audioObj.volume = _this.volume;
     console.log("gameview volume: ".concat(e.target.value));
   });
 };
@@ -8914,8 +8947,8 @@ GameView.prototype.start = function start() {
 GameView.prototype.animate = function animate(time) {
   var _this3 = this;
 
-  this.lastTime = time - this.startTime;
-  document.getElementById("time").innerHTML = Math.floor(this.lastTime);
+  this.lastTime = time - this.startTime; // document.getElementById("time").innerHTML = Math.floor(this.lastTime);
+
   this.game.draw(this.ctx);
 
   if (this.game.beats.length !== 0) {
@@ -9035,6 +9068,9 @@ document.addEventListener("DOMContentLoaded", function () {
   var volumeButtonSongs = document.getElementById("volume-btn-songs");
   var volumeInputSongs = document.getElementById("volume-songs");
   var muteButtonSongs = document.getElementById("mute-songs");
+  var volumeButtonGame = document.getElementById("volume-btn-GV");
+  var volumeInputGame = document.getElementById("volume-GV");
+  var muteButtonGame = document.getElementById("mute-GV");
   var gameContainer = document.querySelector(".game");
   var canvasElement = document.getElementById("game-canvas");
   var ctx = canvasElement.getContext("2d");
@@ -9072,10 +9108,12 @@ document.addEventListener("DOMContentLoaded", function () {
       mute = true;
       volumeInputStart.value = 0;
       volumeInputSongs.value = 0;
+      volumeInputGame.value = 0;
     } else {
       mute = false;
       volumeInputStart.value = volumeLvl;
       volumeInputSongs.value = volumeLvl;
+      volumeInputGame.value = volumeLvl;
     }
   });
   volumeInputStart.addEventListener("change", function (e) {
@@ -9096,10 +9134,12 @@ document.addEventListener("DOMContentLoaded", function () {
       mute = true;
       volumeInputStart.value = 0;
       volumeInputSongs.value = 0;
+      volumeInputGame.value = 0;
     } else {
       mute = false;
       volumeInputStart.value = volumeLvl;
       volumeInputSongs.value = volumeLvl;
+      volumeInputGame.value = volumeLvl;
     }
   });
   volumeInputSongs.addEventListener("change", function (e) {
@@ -9226,7 +9266,8 @@ document.addEventListener("DOMContentLoaded", function () {
     var game = new Game(beatmap);
     var gv_options = {
       audioURL: audioURL,
-      volume: mute ? 0 : volumeLvl
+      volume: volumeLvl,
+      mute: mute
     };
     var gameview = new GameView(game, ctx, gv_options).start();
   });

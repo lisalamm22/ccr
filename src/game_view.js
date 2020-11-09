@@ -10,11 +10,12 @@ function GameView(game, ctx, options) {
   this.hitBeats = {};
   this.score = 0;
   this.audioURL = options.audioURL;
-  this.volume = (options.volume/100)
+  this.volume = (options.volume/100);
+  this.mute = options.mute;
 
   //create audio for game
   this.audioObj = new Audio(this.audioURL);
-  this.audioObj.volume = this.volume;
+  this.audioObj.volume = this.mute ? 0 : this.volume;
 }
 GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
     document.getElementById("game-canvas").addEventListener("mousemove", (e) => {
@@ -50,9 +51,45 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
         this.mousedown = false;
     })
 
-    const volumeInput = document.getElementById("volume-GV")
-    volumeInput.addEventListener("change", (e) => {
-        this.audioObj.volume = e.target.value/100
+
+    const volumeButtonGame = document.getElementById("volume-btn-GV");
+    const volumeInputGame = document.getElementById("volume-GV");
+    const muteButtonGame = document.getElementById("mute-GV")
+    const volumeInputStart = document.getElementById("volume-start");
+    const volumeInputSongs = document.getElementById("volume-songs");
+
+    volumeButtonGame.addEventListener("click", () => {
+        console.log("in volume event")
+        if (volumeInputGame.className === "hidden") {
+            volumeInputGame.classList.remove("hidden")
+            muteButtonGame.classList.remove("hidden")
+        }
+        else {
+            volumeInputGame.classList.add("hidden")
+            muteButtonGame.classList.add("hidden")
+        }
+    });
+
+    muteButtonGame.addEventListener("click", () => {
+        if (!this.mute) {
+            this.mute = true;
+            this.audioObj.volume = 0;
+            volumeInputStart.value = 0;
+            volumeInputSongs.value = 0;
+            volumeInputGame.value = 0;
+        }
+        else {
+            this.mute = false;
+            this.audioObj.volume = this.volume;
+            volumeInputStart.value = this.volume*100
+            volumeInputSongs.value = this.volume * 100
+            volumeInputGame.value = this.volume * 100
+        }
+    })
+
+    volumeInputGame.addEventListener("change", (e) => {
+        this.volume = e.target.value / 100;
+        this.audioObj.volume = this.volume
         console.log(`gameview volume: ${e.target.value}`)
     })
 }
@@ -231,7 +268,7 @@ GameView.prototype.start = function start() {
 
 GameView.prototype.animate = function animate(time) {
     this.lastTime = time - this.startTime;
-    document.getElementById("time").innerHTML = Math.floor(this.lastTime);
+    // document.getElementById("time").innerHTML = Math.floor(this.lastTime);
     this.game.draw(this.ctx);
     if (this.game.beats.length !== 0) {
         this.game.beats.forEach((beat, idx) => {
