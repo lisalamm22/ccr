@@ -8681,7 +8681,6 @@ module.exports = Game;
   \**************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
-/*! CommonJS bailout: module.exports is used directly at 343:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Util = __webpack_require__(/*! ./util */ "./src/util.js"); // const anime = require("animejs");
@@ -9202,7 +9201,6 @@ document.addEventListener("DOMContentLoaded", function () {
     volumeInputStart.value = volumeLvl; // volumeInputSongs.className = "hidden"
   });
   instructButton.addEventListener("click", function () {
-    console.log("instructions");
     instructions.classList.remove("hidden");
     instructionsDoneButton.classList.remove("hidden");
   });
@@ -9247,7 +9245,10 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     songs.style.left = current + "%";
+    checkCurrent(current);
+  }
 
+  function checkCurrent(current) {
     if (current === 0) {
       canvasElement.className = "song-choice-1";
       beatmap = Beatmap1;
@@ -9325,7 +9326,10 @@ document.addEventListener("DOMContentLoaded", function () {
     startMenu.classList.add("hidden");
     songsMenu.classList.add("hidden");
     gameContainer.classList.remove("hidden");
+    checkCurrent(current);
+    console.log(beatmap);
     var game = new Game(beatmap);
+    console.log(game);
     audioObj.setAttribute('src', audioURL);
     audioObj.load();
     var gv_options = {
@@ -9336,12 +9340,11 @@ document.addEventListener("DOMContentLoaded", function () {
     var gameview = new GameView(game, ctx, gv_options).start();
   });
   exitGameButton.addEventListener("click", function () {
+    volumeLvl = audioObj.volume * 100;
+    audioObj.pause();
     startMenu.classList.remove("hidden");
     songsMenu.classList.add("hidden");
     gameContainer.classList.add("hidden");
-    volumeLvl = audioObj.volume * 100;
-    audioObj.pause();
-    current = 0;
     anime({
       targets: ".start-option",
       width: "100%",

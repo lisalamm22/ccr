@@ -120,7 +120,6 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   instructButton.addEventListener("click", () => {
-    console.log("instructions");
     instructions.classList.remove("hidden")
     instructionsDoneButton.classList.remove("hidden")
   });
@@ -167,6 +166,10 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     songs.style.left = current + "%";
+    checkCurrent(current);
+  }
+
+  function checkCurrent(current){
     if(current === 0) {
       canvasElement.className = "song-choice-1";
       beatmap = Beatmap1;
@@ -270,7 +273,10 @@ document.addEventListener("DOMContentLoaded", function () {
     startMenu.classList.add("hidden");
     songsMenu.classList.add("hidden");
     gameContainer.classList.remove("hidden");
+    checkCurrent(current);
+    console.log(beatmap)
     const game = new Game(beatmap);
+    console.log(game)
     audioObj.setAttribute('src', audioURL)
     audioObj.load()
     let gv_options = {
@@ -282,12 +288,11 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   exitGameButton.addEventListener("click", ()=> {
+    volumeLvl = audioObj.volume*100;
+    audioObj.pause();
     startMenu.classList.remove("hidden");
     songsMenu.classList.add("hidden");
     gameContainer.classList.add("hidden");
-    volumeLvl = audioObj.volume*100;
-    audioObj.pause();
-    current = 0;
     anime({
       targets: ".start-option",
       width: "100%",
