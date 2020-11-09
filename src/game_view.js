@@ -40,6 +40,7 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
         }
     });
     window.addEventListener("mousedown", (e)=>{
+        // console.log(`X: ${(e.clientX/window.innerWidth).toFixed(2)} Y: ${(e.clientY/window.innerHeight).toFixed(2)} Time: ${Math.floor(this.lastTime)}`)
         const canvasElement = document.getElementById("game-canvas");
         this.click[0] = e.clientX - (window.innerWidth - canvasElement.width)/2;
         this.click[1] = e.clientY - (window.innerHeight - canvasElement.height) / 2;
@@ -62,14 +63,12 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
     const pauseButton = document.getElementById("pause-btn");
     const unpauseButton = document.getElementById("unpause-btn");
     pauseButton.addEventListener("click", ()=> {
-        console.log("pause button pressed")
         this.pause = true;
         this.audioObj.pause();
         pauseButton.classList.add("hidden")
         unpauseButton.classList.remove("hidden")
     })
     unpauseButton.addEventListener("click", ()=> {
-        console.log("unpause button pressed")
         this.unpause = true;
         this.audioObj.play();
         unpauseButton.classList.add("hidden")
@@ -84,14 +83,14 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
     const volumeInputSongs = document.getElementById("volume-songs");
 
     volumeButtonGame.addEventListener("click", () => {
-        console.log("in volume event")
+        // console.log("in volume event")
         if (volumeInputGame.className === "hidden") {
-            console.log("in hidden")
+            // console.log("in hidden")
             volumeInputGame.classList.remove("hidden")
             muteButtonGame.classList.remove("hidden")
         }
         else {
-            console.log("in not hidden")
+            // console.log("in not hidden")
             volumeInputGame.classList.add("hidden")
             muteButtonGame.classList.add("hidden")
         }

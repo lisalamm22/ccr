@@ -57,7 +57,6 @@ document.addEventListener("DOMContentLoaded", function () {
   let mute = false;
 
   volumeButtonStart.addEventListener("click", () => {
-    console.log("in volume event")
     if(volumeInputStart.className === "hidden"){
       volumeInputStart.classList.remove("hidden")
       muteButtonStart.classList.remove("hidden")

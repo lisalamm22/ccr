@@ -8681,7 +8681,7 @@ module.exports = Game;
   \**************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
-/*! CommonJS bailout: module.exports is used directly at 345:0-14 */
+/*! CommonJS bailout: module.exports is used directly at 343:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Util = __webpack_require__(/*! ./util */ "./src/util.js"); // const anime = require("animejs");
@@ -8730,6 +8730,7 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
     }
   });
   window.addEventListener("mousedown", function (e) {
+    // console.log(`X: ${(e.clientX/window.innerWidth).toFixed(2)} Y: ${(e.clientY/window.innerHeight).toFixed(2)} Time: ${Math.floor(this.lastTime)}`)
     var canvasElement = document.getElementById("game-canvas");
     _this.click[0] = e.clientX - (window.innerWidth - canvasElement.width) / 2;
     _this.click[1] = e.clientY - (window.innerHeight - canvasElement.height) / 2;
@@ -8751,7 +8752,6 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
   var pauseButton = document.getElementById("pause-btn");
   var unpauseButton = document.getElementById("unpause-btn");
   pauseButton.addEventListener("click", function () {
-    console.log("pause button pressed");
     _this.pause = true;
 
     _this.audioObj.pause();
@@ -8760,7 +8760,6 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
     unpauseButton.classList.remove("hidden");
   });
   unpauseButton.addEventListener("click", function () {
-    console.log("unpause button pressed");
     _this.unpause = true;
 
     _this.audioObj.play();
@@ -8775,14 +8774,13 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
   var volumeInputStart = document.getElementById("volume-start");
   var volumeInputSongs = document.getElementById("volume-songs");
   volumeButtonGame.addEventListener("click", function () {
-    console.log("in volume event");
-
+    // console.log("in volume event")
     if (volumeInputGame.className === "hidden") {
-      console.log("in hidden");
+      // console.log("in hidden")
       volumeInputGame.classList.remove("hidden");
       muteButtonGame.classList.remove("hidden");
     } else {
-      console.log("in not hidden");
+      // console.log("in not hidden")
       volumeInputGame.classList.add("hidden");
       muteButtonGame.classList.add("hidden");
     }
@@ -9152,8 +9150,6 @@ document.addEventListener("DOMContentLoaded", function () {
   var volumeLvl = 50;
   var mute = false;
   volumeButtonStart.addEventListener("click", function () {
-    console.log("in volume event");
-
     if (volumeInputStart.className === "hidden") {
       volumeInputStart.classList.remove("hidden");
       muteButtonStart.classList.remove("hidden");
