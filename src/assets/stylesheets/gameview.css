@@ -7,8 +7,29 @@ body{
   align-items: center;
   position: relative;
   margin: 0 auto;
-  overflow: hidden;
+  /* overflow: hidden; */
 }
+
+.game{
+  position: relative;
+}
+
+.game-nav{
+  display: flex;
+  position: absolute;
+  bottom: 10%;
+  left: 3%;
+}
+
+.game-nav div{
+  margin-right: 20px;
+}
+
+/* #volume-btn-GV{
+  position: absolute;
+  top: 0%;
+  right: 0%;
+} */
 
 .song-choice-1{
   background-image: url("../images/1.jpg");

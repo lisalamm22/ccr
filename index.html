@@ -94,8 +94,23 @@
     <div class="game hidden">
         <canvas id="game-canvas"></canvas>
         <p id="time"></p>
-        <div id="volume-btn">Volume</div>
-        <input type="range" id="volume-GV" min="0" max="100">
+        <div class="game-nav">
+            <div id="start-menu-btn" class="small-button">
+                <p class="button-txt">Main Menu</p>
+            </div>
+            <div class="small-button">
+                <p class="button-txt">Start</p>
+            </div>
+            <div class="volume-container">
+                <div id="volume-btn-GV" class="small-button">
+                    <p class="button-txt">Volume</p>
+                </div>
+                <input type="range" id="volume-GV" class="hidden" min="0" max="100">
+                <div id="mute-GV" class="mute small-button hidden">
+                    <p>Mute</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script type="application/javascript" src="./dist/bundle.js"></script>
