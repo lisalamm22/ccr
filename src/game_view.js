@@ -12,6 +12,7 @@ function GameView(game, ctx, options) {
   this.audioURL = options.audioURL;
   this.volume = (options.volume/100);
   this.mute = options.mute;
+  this.restart = false;
 
   //create audio for game
   this.audioObj = new Audio(this.audioURL);
@@ -51,6 +52,10 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
         this.mousedown = false;
     })
 
+    const restartButton = document.getElementById("restart-btn");
+    restartButton.addEventListener("click", ()=> {
+        this.restart = true
+    })
 
     const volumeButtonGame = document.getElementById("volume-btn-GV");
     const volumeInputGame = document.getElementById("volume-GV");
@@ -90,7 +95,6 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
     volumeInputGame.addEventListener("change", (e) => {
         this.volume = e.target.value / 100;
         this.audioObj.volume = this.volume
-        console.log(`gameview volume: ${e.target.value}`)
     })
 }
 
@@ -255,6 +259,7 @@ GameView.prototype.playAudio = function playAudio(){
 // }
 
 GameView.prototype.start = function start() {
+    this.audioObj.currentTime = 0;
     this.playAudio()
     this.game.checkSeq();
     this.game.makeBeats();
@@ -264,6 +269,18 @@ GameView.prototype.start = function start() {
     this.beatIdx = 0;
     requestAnimationFrame(this.animate.bind(this));
 };
+
+GameView.prototype.restartGame = function restartGame() {
+    this.audioObj.currentTime = 0;
+    this.playAudio()
+    this.lastTime = 0;
+    this.startTime = performance.now()
+    this.beatIdx = 0;
+    this.activeBeats = [];
+    this.hitBeats = {};
+    this.score = 0;
+    requestAnimationFrame(this.animate.bind(this));
+}
 
 
 GameView.prototype.animate = function animate(time) {
@@ -284,7 +301,13 @@ GameView.prototype.animate = function animate(time) {
             }
         })
     }
-    requestAnimationFrame(this.animate.bind(this));
+    if (this.restart){
+        this.restart = false;
+        this.restartGame();
+    }
+    else{
+        requestAnimationFrame(this.animate.bind(this));
+    }
 };
 
 module.exports = GameView;

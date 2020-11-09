@@ -8681,7 +8681,7 @@ module.exports = Game;
   \**************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
-/*! CommonJS bailout: module.exports is used directly at 287:0-14 */
+/*! CommonJS bailout: module.exports is used directly at 309:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Util = __webpack_require__(/*! ./util */ "./src/util.js"); // const anime = require("animejs");
@@ -8697,7 +8697,8 @@ function GameView(game, ctx, options) {
   this.score = 0;
   this.audioURL = options.audioURL;
   this.volume = options.volume / 100;
-  this.mute = options.mute; //create audio for game
+  this.mute = options.mute;
+  this.restart = false; //create audio for game
 
   this.audioObj = new Audio(this.audioURL);
   this.audioObj.volume = this.mute ? 0 : this.volume;
@@ -8739,6 +8740,10 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
   window.addEventListener("mouseup", function (e) {
     _this.mousedown = false;
   });
+  var restartButton = document.getElementById("restart-btn");
+  restartButton.addEventListener("click", function () {
+    _this.restart = true;
+  });
   var volumeButtonGame = document.getElementById("volume-btn-GV");
   var volumeInputGame = document.getElementById("volume-GV");
   var muteButtonGame = document.getElementById("mute-GV");
@@ -8773,7 +8778,6 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
   volumeInputGame.addEventListener("change", function (e) {
     _this.volume = e.target.value / 100;
     _this.audioObj.volume = _this.volume;
-    console.log("gameview volume: ".concat(e.target.value));
   });
 };
 
@@ -8934,6 +8938,7 @@ GameView.prototype.playAudio = function playAudio() {
 
 
 GameView.prototype.start = function start() {
+  this.audioObj.currentTime = 0;
   this.playAudio();
   this.game.checkSeq();
   this.game.makeBeats();
@@ -8941,6 +8946,18 @@ GameView.prototype.start = function start() {
   this.lastTime = 0;
   this.startTime = performance.now();
   this.beatIdx = 0;
+  requestAnimationFrame(this.animate.bind(this));
+};
+
+GameView.prototype.restartGame = function restartGame() {
+  this.audioObj.currentTime = 0;
+  this.playAudio();
+  this.lastTime = 0;
+  this.startTime = performance.now();
+  this.beatIdx = 0;
+  this.activeBeats = [];
+  this.hitBeats = {};
+  this.score = 0;
   requestAnimationFrame(this.animate.bind(this));
 };
 
@@ -8967,7 +8984,12 @@ GameView.prototype.animate = function animate(time) {
     });
   }
 
-  requestAnimationFrame(this.animate.bind(this));
+  if (this.restart) {
+    this.restart = false;
+    this.restartGame();
+  } else {
+    requestAnimationFrame(this.animate.bind(this));
+  }
 };
 
 module.exports = GameView;
@@ -9068,9 +9090,8 @@ document.addEventListener("DOMContentLoaded", function () {
   var volumeButtonSongs = document.getElementById("volume-btn-songs");
   var volumeInputSongs = document.getElementById("volume-songs");
   var muteButtonSongs = document.getElementById("mute-songs");
-  var volumeButtonGame = document.getElementById("volume-btn-GV");
   var volumeInputGame = document.getElementById("volume-GV");
-  var muteButtonGame = document.getElementById("mute-GV");
+  var startMenuButtonGV = document.querySelector(".game-nav#start-menu-btn");
   var gameContainer = document.querySelector(".game");
   var canvasElement = document.getElementById("game-canvas");
   var ctx = canvasElement.getContext("2d");

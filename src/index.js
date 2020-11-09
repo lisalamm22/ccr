@@ -26,9 +26,9 @@ document.addEventListener("DOMContentLoaded", function () {
   const volumeInputSongs = document.getElementById("volume-songs");
   const muteButtonSongs = document.getElementById("mute-songs")
 
-  const volumeButtonGame = document.getElementById("volume-btn-GV");
   const volumeInputGame = document.getElementById("volume-GV");
-  const muteButtonGame = document.getElementById("mute-GV")
+  const startMenuButtonGV = document.querySelector(".game-nav#start-menu-btn")
+
   const gameContainer = document.querySelector(".game");
   const canvasElement = document.getElementById("game-canvas");
   const ctx = canvasElement.getContext("2d");
@@ -269,4 +269,7 @@ document.addEventListener("DOMContentLoaded", function () {
     };
     const gameview = new GameView(game, ctx, gv_options).start();
   });
+
+
+
 });
