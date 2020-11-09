@@ -262,7 +262,7 @@ GameView.prototype.scoreHit = function scoreHit(beat){
     const fullScore = 100;
     const activeBeatT = 500;
     let hitTime = this.hitBeats[JSON.stringify(beat)];
-    this.score += fullScore * (activeBeatT-Math.abs(hitTime-beat.time))/activeBeatT
+    this.score += Math.abs(fullScore * (activeBeatT-Math.abs(hitTime-beat.time))/activeBeatT)
 }
 
 GameView.prototype.scoreDrag = function scoreDrag(hit){
@@ -313,6 +313,7 @@ GameView.prototype.animate = function animate(time) {
     }
     this.lastTime = time - this.startTime - this.pausedTime;
     // document.getElementById("time").innerHTML = Math.floor(this.lastTime);
+    document.getElementById("score").innerHTML = `Score ${Math.floor(this.score)}`;
     this.game.draw(this.ctx);
     if (this.game.beats.length !== 0) {
         this.game.beats.forEach((beat, idx) => {

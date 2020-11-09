@@ -8681,6 +8681,7 @@ module.exports = Game;
   \**************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 345:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Util = __webpack_require__(/*! ./util */ "./src/util.js"); // const anime = require("animejs");
@@ -8943,7 +8944,7 @@ GameView.prototype.scoreHit = function scoreHit(beat) {
   var fullScore = 100;
   var activeBeatT = 500;
   var hitTime = this.hitBeats[JSON.stringify(beat)];
-  this.score += fullScore * (activeBeatT - Math.abs(hitTime - beat.time)) / activeBeatT;
+  this.score += Math.abs(fullScore * (activeBeatT - Math.abs(hitTime - beat.time)) / activeBeatT);
 };
 
 GameView.prototype.scoreDrag = function scoreDrag(hit) {
@@ -8999,6 +9000,7 @@ GameView.prototype.animate = function animate(time) {
 
   this.lastTime = time - this.startTime - this.pausedTime; // document.getElementById("time").innerHTML = Math.floor(this.lastTime);
 
+  document.getElementById("score").innerHTML = "Score ".concat(Math.floor(this.score));
   this.game.draw(this.ctx);
 
   if (this.game.beats.length !== 0) {
