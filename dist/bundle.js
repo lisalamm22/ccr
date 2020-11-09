@@ -8681,7 +8681,7 @@ module.exports = Game;
   \**************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
-/*! CommonJS bailout: module.exports is used directly at 309:0-14 */
+/*! CommonJS bailout: module.exports is used directly at 344:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Util = __webpack_require__(/*! ./util */ "./src/util.js"); // const anime = require("animejs");
@@ -8698,9 +8698,11 @@ function GameView(game, ctx, options) {
   this.audioURL = options.audioURL;
   this.volume = options.volume / 100;
   this.mute = options.mute;
-  this.restart = false; //create audio for game
-
-  this.audioObj = new Audio(this.audioURL);
+  this.restart = false;
+  this.pause = false;
+  this.unpause = false;
+  this.pausedTime = 0;
+  this.audioObj = options.audioObj;
   this.audioObj.volume = this.mute ? 0 : this.volume;
 }
 
@@ -8743,6 +8745,29 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
   var restartButton = document.getElementById("restart-btn");
   restartButton.addEventListener("click", function () {
     _this.restart = true;
+
+    _this.restartGame();
+  });
+  var pauseButton = document.getElementById("pause-btn");
+  var unpauseButton = document.getElementById("unpause-btn");
+  pauseButton.addEventListener("click", function () {
+    console.log("pause button pressed");
+    _this.pause = true;
+
+    _this.audioObj.pause();
+
+    pauseButton.classList.add("hidden");
+    unpauseButton.classList.remove("hidden");
+  });
+  unpauseButton.addEventListener("click", function () {
+    console.log("unpause button pressed");
+    _this.unpause = true;
+
+    _this.audioObj.play();
+
+    unpauseButton.classList.add("hidden");
+    pauseButton.classList.remove("hidden");
+    requestAnimationFrame(_this.animate.bind(_this));
   });
   var volumeButtonGame = document.getElementById("volume-btn-GV");
   var volumeInputGame = document.getElementById("volume-GV");
@@ -8753,9 +8778,11 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
     console.log("in volume event");
 
     if (volumeInputGame.className === "hidden") {
+      console.log("in hidden");
       volumeInputGame.classList.remove("hidden");
       muteButtonGame.classList.remove("hidden");
     } else {
+      console.log("in not hidden");
       volumeInputGame.classList.add("hidden");
       muteButtonGame.classList.add("hidden");
     }
@@ -8778,6 +8805,8 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
   volumeInputGame.addEventListener("change", function (e) {
     _this.volume = e.target.value / 100;
     _this.audioObj.volume = _this.volume;
+    volumeInputStart.value = e.target.value;
+    volumeInputSongs.value = e.target.value;
   });
 };
 
@@ -8930,12 +8959,7 @@ GameView.prototype.playAudio = function playAudio() {
   this.audioObj.addEventListener("canplaythrough", function (e) {
     _this2.audioObj.play();
   });
-}; // GameView.prototype.changeAudioVol = function changeAudioVol(){
-//     this.audioObj.addEventListener("canplaythrough", (e) => {
-//         this.audioObj.play();
-//     })
-// }
-
+};
 
 GameView.prototype.start = function start() {
   this.audioObj.currentTime = 0;
@@ -8958,13 +8982,23 @@ GameView.prototype.restartGame = function restartGame() {
   this.activeBeats = [];
   this.hitBeats = {};
   this.score = 0;
+  this.restart = false;
+  this.pause = false;
+  this.unpause = false;
+  this.pausedTime = 0;
   requestAnimationFrame(this.animate.bind(this));
 };
 
 GameView.prototype.animate = function animate(time) {
   var _this3 = this;
 
-  this.lastTime = time - this.startTime; // document.getElementById("time").innerHTML = Math.floor(this.lastTime);
+  if (this.unpause) {
+    this.pausedTime = time - (this.startTime + this.lastTime);
+    this.pause = false;
+    this.unpause = false;
+  }
+
+  this.lastTime = time - this.startTime - this.pausedTime; // document.getElementById("time").innerHTML = Math.floor(this.lastTime);
 
   this.game.draw(this.ctx);
 
@@ -8985,8 +9019,9 @@ GameView.prototype.animate = function animate(time) {
   }
 
   if (this.restart) {
-    this.restart = false;
-    this.restartGame();
+    return null;
+  } else if (this.pause) {
+    return null;
   } else {
     requestAnimationFrame(this.animate.bind(this));
   }
@@ -9091,7 +9126,7 @@ document.addEventListener("DOMContentLoaded", function () {
   var volumeInputSongs = document.getElementById("volume-songs");
   var muteButtonSongs = document.getElementById("mute-songs");
   var volumeInputGame = document.getElementById("volume-GV");
-  var startMenuButtonGV = document.querySelector(".game-nav#start-menu-btn");
+  var exitGameButton = document.getElementById("exit-game-btn");
   var gameContainer = document.querySelector(".game");
   var canvasElement = document.getElementById("game-canvas");
   var ctx = canvasElement.getContext("2d");
@@ -9273,24 +9308,42 @@ document.addEventListener("DOMContentLoaded", function () {
       width: "100%",
       easing: "easeInOutQuad",
       direction: "normal",
-      delay: anime.stagger(1000)
+      delay: anime.stagger(500)
     });
   }); //set game area
 
   canvasElement.width = window.innerWidth;
   canvasElement.height = window.innerHeight; //start new game
 
+  var audioObj = new Audio(audioURL);
   startButton.addEventListener("click", function () {
     startMenu.classList.add("hidden");
     songsMenu.classList.add("hidden");
     gameContainer.classList.remove("hidden");
     var game = new Game(beatmap);
+    audioObj.setAttribute('src', audioURL);
+    audioObj.load();
     var gv_options = {
-      audioURL: audioURL,
+      audioObj: audioObj,
       volume: volumeLvl,
       mute: mute
     };
     var gameview = new GameView(game, ctx, gv_options).start();
+  });
+  exitGameButton.addEventListener("click", function () {
+    startMenu.classList.remove("hidden");
+    songsMenu.classList.add("hidden");
+    gameContainer.classList.add("hidden");
+    volumeLvl = audioObj.volume * 100;
+    audioObj.pause();
+    current = 0;
+    anime({
+      targets: ".start-option",
+      width: "100%",
+      easing: "easeInOutQuad",
+      direction: "normal",
+      delay: anime.stagger(500)
+    });
   });
 });
 })();

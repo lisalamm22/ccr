@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const muteButtonSongs = document.getElementById("mute-songs")
 
   const volumeInputGame = document.getElementById("volume-GV");
-  const startMenuButtonGV = document.querySelector(".game-nav#start-menu-btn")
+  const exitGameButton = document.getElementById("exit-game-btn");
 
   const gameContainer = document.querySelector(".game");
   const canvasElement = document.getElementById("game-canvas");
@@ -248,7 +248,7 @@ document.addEventListener("DOMContentLoaded", function () {
       width: "100%",
       easing: "easeInOutQuad",
       direction: "normal",
-      delay: anime.stagger(1000)
+      delay: anime.stagger(500)
     });
   });
 
@@ -257,19 +257,36 @@ document.addEventListener("DOMContentLoaded", function () {
   canvasElement.height = window.innerHeight;
 
   //start new game
+  let audioObj = new Audio(audioURL)
   startButton.addEventListener("click", () => {
     startMenu.classList.add("hidden");
     songsMenu.classList.add("hidden");
     gameContainer.classList.remove("hidden");
     const game = new Game(beatmap);
+    audioObj.setAttribute('src', audioURL)
+    audioObj.load()
     let gv_options = {
-      audioURL: audioURL,
+      audioObj: audioObj,
       volume: volumeLvl,
       mute: mute,
     };
     const gameview = new GameView(game, ctx, gv_options).start();
   });
 
-
+  exitGameButton.addEventListener("click", ()=> {
+    startMenu.classList.remove("hidden");
+    songsMenu.classList.add("hidden");
+    gameContainer.classList.add("hidden");
+    volumeLvl = audioObj.volume*100;
+    audioObj.pause();
+    current = 0;
+    anime({
+      targets: ".start-option",
+      width: "100%",
+      easing: "easeInOutQuad",
+      direction: "normal",
+      delay: anime.stagger(500)
+    });
+  })
 
 });

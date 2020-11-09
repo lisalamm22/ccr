@@ -13,9 +13,10 @@ function GameView(game, ctx, options) {
   this.volume = (options.volume/100);
   this.mute = options.mute;
   this.restart = false;
-
-  //create audio for game
-  this.audioObj = new Audio(this.audioURL);
+  this.pause = false;
+  this.unpause = false;
+  this.pausedTime = 0;
+  this.audioObj = options.audioObj;
   this.audioObj.volume = this.mute ? 0 : this.volume;
 }
 GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
@@ -54,7 +55,26 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
 
     const restartButton = document.getElementById("restart-btn");
     restartButton.addEventListener("click", ()=> {
-        this.restart = true
+        this.restart = true;
+        this.restartGame();
+    })
+
+    const pauseButton = document.getElementById("pause-btn");
+    const unpauseButton = document.getElementById("unpause-btn");
+    pauseButton.addEventListener("click", ()=> {
+        console.log("pause button pressed")
+        this.pause = true;
+        this.audioObj.pause();
+        pauseButton.classList.add("hidden")
+        unpauseButton.classList.remove("hidden")
+    })
+    unpauseButton.addEventListener("click", ()=> {
+        console.log("unpause button pressed")
+        this.unpause = true;
+        this.audioObj.play();
+        unpauseButton.classList.add("hidden")
+        pauseButton.classList.remove("hidden")
+        requestAnimationFrame(this.animate.bind(this))
     })
 
     const volumeButtonGame = document.getElementById("volume-btn-GV");
@@ -66,10 +86,12 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
     volumeButtonGame.addEventListener("click", () => {
         console.log("in volume event")
         if (volumeInputGame.className === "hidden") {
+            console.log("in hidden")
             volumeInputGame.classList.remove("hidden")
             muteButtonGame.classList.remove("hidden")
         }
         else {
+            console.log("in not hidden")
             volumeInputGame.classList.add("hidden")
             muteButtonGame.classList.add("hidden")
         }
@@ -94,7 +116,9 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
 
     volumeInputGame.addEventListener("change", (e) => {
         this.volume = e.target.value / 100;
-        this.audioObj.volume = this.volume
+        this.audioObj.volume = this.volume;
+        volumeInputStart.value = e.target.value;
+        volumeInputSongs.value = e.target.value;
     })
 }
 
@@ -252,11 +276,6 @@ GameView.prototype.playAudio = function playAudio(){
         this.audioObj.play();
     })
 }
-// GameView.prototype.changeAudioVol = function changeAudioVol(){
-//     this.audioObj.addEventListener("canplaythrough", (e) => {
-//         this.audioObj.play();
-//     })
-// }
 
 GameView.prototype.start = function start() {
     this.audioObj.currentTime = 0;
@@ -279,12 +298,20 @@ GameView.prototype.restartGame = function restartGame() {
     this.activeBeats = [];
     this.hitBeats = {};
     this.score = 0;
+    this.restart = false;
+    this.pause = false;
+    this.unpause = false;
+    this.pausedTime = 0;
     requestAnimationFrame(this.animate.bind(this));
 }
 
-
 GameView.prototype.animate = function animate(time) {
-    this.lastTime = time - this.startTime;
+    if(this.unpause){
+        this.pausedTime = time - (this.startTime + this.lastTime)
+        this.pause = false;
+        this.unpause = false;
+    }
+    this.lastTime = time - this.startTime - this.pausedTime;
     // document.getElementById("time").innerHTML = Math.floor(this.lastTime);
     this.game.draw(this.ctx);
     if (this.game.beats.length !== 0) {
@@ -302,8 +329,10 @@ GameView.prototype.animate = function animate(time) {
         })
     }
     if (this.restart){
-        this.restart = false;
-        this.restartGame();
+        return null
+    }
+    else if(this.pause){
+        return null
     }
     else{
         requestAnimationFrame(this.animate.bind(this));
