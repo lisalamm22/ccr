@@ -2,10 +2,15 @@
 
 <head>
     <title>Click Click Revolution</title>
+    <meta property="og:title" content="Click Click Revolution" />
+    <meta property="og:image" content="./src/assets/images/CCR.png" />
+    <meta property="og:description" content="CCR is a rhythm game that targets precise mouse movements and keypress timing." />
+    <meta property="og:url" content="https://lisalamm22.github.io/ccr/" />
     <link rel="stylesheet" type="text/css" href="./src/assets/stylesheets/startmenu.css" />
     <link rel="stylesheet" type="text/css" href="./src/assets/stylesheets/songsmenu.css" />
     <link rel="stylesheet" type="text/css" href="./src/assets/stylesheets/gameview.css" />
     <script src="https://cdn.jsdelivr.net/npm/animejs@3.0.1/lib/anime.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link
         href="https://fonts.googleapis.com/css2?family=Exo:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
         rel="stylesheet">
@@ -123,24 +128,24 @@
         <p id="score"></p>
         <div class="game-nav">
             <div id="exit-game-btn" class="small-button">
-                <p class="button-txt">Exit</p>
+                <p class="button-txt"><i class="fa fa-times"></i></p>
             </div>
             <div id="restart-btn" class="small-button">
-                <p class="button-txt">Restart</p>
+                <p class="button-txt"><i class="fa fa-history"></i></p>
             </div>
             <div id="pause-btn" class="small-button">
-                <p class="button-txt">Pause</p>
+                <p class="button-txt"><i class="fa fa-pause"></i></p>
             </div>
             <div id="unpause-btn" class="small-button hidden">
-                <p class="button-txt">Play</p>
+                <p class="button-txt"><i class="fa fa-play"></i></p>
             </div>
             <div class="volume-container">
                 <div id="volume-btn-GV" class="small-button">
-                    <p class="button-txt">Volume</p>
+                    <p class="button-txt"><i class="fa fa-volume-up"></i></p>
                 </div>
                 <input type="range" id="volume-GV" class="hidden" min="0" max="100">
                 <div id="mute-GV" class="mute small-button hidden">
-                    <p>Mute</p>
+                    <p><i class="fa fa-volume-mute"></i></p>
                 </div>
             </div>
         </div>
