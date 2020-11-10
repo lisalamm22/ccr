@@ -8681,7 +8681,7 @@ module.exports = Game;
   \**************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
-/*! CommonJS bailout: module.exports is used directly at 339:0-14 */
+/*! CommonJS bailout: module.exports is used directly at 351:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Util = __webpack_require__(/*! ./util */ "./src/util.js"); // const anime = require("animejs");
@@ -8752,22 +8752,34 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
   var pauseButton = document.getElementById("pause-btn");
   var unpauseButton = document.getElementById("unpause-btn");
   pauseButton.addEventListener("click", function () {
-    _this.pause = true;
-
-    _this.audioObj.pause();
-
-    pauseButton.classList.add("hidden");
-    unpauseButton.classList.remove("hidden");
+    _this.pauseGame();
   });
   unpauseButton.addEventListener("click", function () {
-    _this.unpause = true;
+    _this.unpauseGame();
+  });
+  window.addEventListener("keyup", function (e) {
+    if (e.keyCode === 27 && !_this.pause) {
+      _this.pauseGame();
+    } else {
+      _this.unpauseGame();
+    }
+  });
 
-    _this.audioObj.play();
+  GameView.prototype.pauseGame = function pauseGame() {
+    this.pause = true;
+    this.audioObj.pause();
+    pauseButton.classList.add("hidden");
+    unpauseButton.classList.remove("hidden");
+  };
 
+  GameView.prototype.unpauseGame = function unpauseGame() {
+    this.unpause = true;
+    this.audioObj.play();
     unpauseButton.classList.add("hidden");
     pauseButton.classList.remove("hidden");
-    requestAnimationFrame(_this.animate.bind(_this));
-  });
+    requestAnimationFrame(this.animate.bind(this));
+  };
+
   var volumeButtonGame = document.getElementById("volume-btn-GV");
   var volumeInputGame = document.getElementById("volume-GV");
   var muteButtonGame = document.getElementById("mute-GV");

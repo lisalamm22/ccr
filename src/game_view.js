@@ -59,22 +59,37 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
         this.restart = true;
         this.restartGame();
     })
-
+    
     const pauseButton = document.getElementById("pause-btn");
     const unpauseButton = document.getElementById("unpause-btn");
     pauseButton.addEventListener("click", ()=> {
-        this.pause = true;
-        this.audioObj.pause();
-        pauseButton.classList.add("hidden")
-        unpauseButton.classList.remove("hidden")
+        this.pauseGame();
     })
     unpauseButton.addEventListener("click", ()=> {
+        this.unpauseGame();
+    })
+    window.addEventListener("keyup", (e) => {
+        if(e.keyCode === 27 && !this.pause){
+            this.pauseGame();
+        }
+        else{
+            this.unpauseGame();
+        }
+    })
+
+    GameView.prototype.pauseGame = function pauseGame() {
+        this.pause = true;
+        this.audioObj.pause();
+        pauseButton.classList.add("hidden");
+        unpauseButton.classList.remove("hidden");
+    }
+    GameView.prototype.unpauseGame = function unpauseGame() {
         this.unpause = true;
         this.audioObj.play();
-        unpauseButton.classList.add("hidden")
-        pauseButton.classList.remove("hidden")
-        requestAnimationFrame(this.animate.bind(this))
-    })
+        unpauseButton.classList.add("hidden");
+        pauseButton.classList.remove("hidden");
+        requestAnimationFrame(this.animate.bind(this));
+    }
 
     const volumeButtonGame = document.getElementById("volume-btn-GV");
     const volumeInputGame = document.getElementById("volume-GV");
