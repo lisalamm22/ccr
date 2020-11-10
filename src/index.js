@@ -168,86 +168,90 @@ document.addEventListener("DOMContentLoaded", function () {
     songs.style.left = current + "%";
     checkCurrent(current);
   }
-
+  let songchoice = 1;
   function checkCurrent(current){
     if(current === 0) {
       canvasElement.className = "song-choice-1";
       beatmap = Beatmap1;
+      songchoice = 1;
       audioURL =
-        "./src/assets/sounds/1. Cut Your Teeth by Kyla La Grange (Kygo Remix).mp3";
+      "./src/assets/sounds/1. Cut Your Teeth by Kyla La Grange (Kygo Remix).mp3";
     }
     else if(current === -100){
       canvasElement.className = "song-choice-2";
       beatmap = Beatmap2;
+      songchoice = 2;
       audioURL =
-        "./src/assets/sounds/2. トルコ行進曲 by T.M. Orchestra.mp3";
+      "./src/assets/sounds/2. トルコ行進曲 by T.M. Orchestra.mp3";
     }
     else if(current === -200){
       canvasElement.className = "song-choice-3";
       beatmap = Beatmap3;
+      songchoice = 3;
       audioURL =
-        "./src/assets/sounds/3. さよならトリップ by Dormir.mp3";
+      "./src/assets/sounds/3. さよならトリップ by Dormir.mp3";
     }
     else if(current === -300){
       canvasElement.className = "song-choice-4";
       beatmap = Beatmap4;
+      songchoice = 4;
       audioURL =
-        "./src/assets/sounds/4. Mario Brothers Theme.mp3";
+      "./src/assets/sounds/4. Mario Brothers Theme.mp3";
     }
     else if(current === -400){
       canvasElement.className = "song-choice-5";
       beatmap = Beatmap5;
+      songchoice = 5;
       audioURL =
-        "./src/assets/sounds/5. Theory of Eternity by TAG.mp3";
+      "./src/assets/sounds/5. Theory of Eternity by TAG.mp3";
     }
     else if(current === -500){
       canvasElement.className = "song-choice-6";
       beatmap = Beatmap6;
+      songchoice = 6;
       audioURL =
-        "./src/assets/sounds/6. Don't Give Up On Me Now by R3HAB and Julie Bergan.mp3";
+      "./src/assets/sounds/6. Don't Give Up On Me Now by R3HAB and Julie Bergan.mp3";
     }
     else if(current === -600){
       canvasElement.className = "song-choice-7";
       beatmap = Beatmap7;
+      songchoice = 7;
       audioURL =
-        "./src/assets/sounds/7. もののけ姫 by 新井大樹.mp3";
+      "./src/assets/sounds/7. もののけ姫 by 新井大樹.mp3";
     }
     else if(current === -700){
       canvasElement.className = "song-choice-8";
       beatmap = Beatmap8;
+      songchoice = 8;
       audioURL =
-        "./src/assets/sounds/8. Polygon by Sota Fujimori.mp3";
+      "./src/assets/sounds/8. Polygon by Sota Fujimori.mp3";
     }
     else if(current === -800){
       canvasElement.className = "song-choice-9";
       beatmap = Beatmap9;
+      songchoice = 9;
       audioURL =
-        "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+      "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
     }
     else if(current === -900){
       canvasElement.className = "song-choice-10";
       beatmap = Beatmap10;
+      songchoice = 10;
+      // const game10 = new Game(Beatmap10);
+      // beatmap = game10;
       audioURL =
         "./src/assets/sounds/10. Country Rounds by Kings & Folks (Sqeepo Remix) .mp3";
     }
   }
 
-  // let autoChange = setInterval(changeSong, delay);
-  // const restart = function () {
-  //   clearInterval(autoChange);
-  //   autoChange = setInterval(changeSong, delay);
-  // };
-
   const nextSongButton = document.getElementById("next-btn")
   nextSongButton.addEventListener("click", () => {
     changeSong();
-    // restart();
   });
 
   const prevSongButton = document.getElementById("prev-btn")
   prevSongButton.addEventListener("click", () => {
     changeSong(false);
-    // restart();
   });
 
   startMenuButton.addEventListener("click", () => {
@@ -263,20 +267,20 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  //set game area
   canvasElement.width = window.innerWidth;
   canvasElement.height = window.innerHeight;
+  ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+  ctx.globalAlpha = 1;
 
   //start new game
   let audioObj = new Audio(audioURL)
+  let gameview={};
   startButton.addEventListener("click", () => {
     startMenu.classList.add("hidden");
     songsMenu.classList.add("hidden");
     gameContainer.classList.remove("hidden");
     checkCurrent(current);
-    console.log(beatmap)
     const game = new Game(beatmap);
-    console.log(game)
     audioObj.setAttribute('src', audioURL)
     audioObj.load()
     let gv_options = {
@@ -284,7 +288,13 @@ document.addEventListener("DOMContentLoaded", function () {
       volume: volumeLvl,
       mute: mute,
     };
-    const gameview = new GameView(game, ctx, gv_options).start();
+    if(gameview[songchoice]){
+      gameview[songchoice].restartGame();
+    }
+    else{
+      gameview[songchoice] = new GameView(game, ctx, gv_options)
+      gameview[songchoice].start();
+    }
   });
 
   exitGameButton.addEventListener("click", ()=> {

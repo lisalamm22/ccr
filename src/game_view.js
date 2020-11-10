@@ -9,7 +9,7 @@ function GameView(game, ctx, options) {
   this.activeBeats = [];
   this.hitBeats = {};
   this.score = 0;
-  this.audioURL = options.audioURL;
+//   this.audioURL = options.audioURL;
   this.volume = (options.volume/100);
   this.mute = options.mute;
   this.restart = false;
@@ -83,14 +83,11 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
     const volumeInputSongs = document.getElementById("volume-songs");
 
     volumeButtonGame.addEventListener("click", () => {
-        // console.log("in volume event")
         if (volumeInputGame.className === "hidden") {
-            // console.log("in hidden")
             volumeInputGame.classList.remove("hidden")
             muteButtonGame.classList.remove("hidden")
         }
         else {
-            // console.log("in not hidden")
             volumeInputGame.classList.add("hidden")
             muteButtonGame.classList.add("hidden")
         }
@@ -311,9 +308,8 @@ GameView.prototype.animate = function animate(time) {
         this.unpause = false;
     }
     this.lastTime = time - this.startTime - this.pausedTime;
-    // document.getElementById("time").innerHTML = Math.floor(this.lastTime);
+    this.ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
     document.getElementById("score").innerHTML = `Score ${Math.floor(this.score)}`;
-    this.game.draw(this.ctx);
     if (this.game.beats.length !== 0) {
         this.game.beats.forEach((beat, idx) => {
             this.isActiveBeat(beat, idx, this.lastTime)

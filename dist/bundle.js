@@ -8681,6 +8681,7 @@ module.exports = Game;
   \**************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 339:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Util = __webpack_require__(/*! ./util */ "./src/util.js"); // const anime = require("animejs");
@@ -8693,8 +8694,8 @@ function GameView(game, ctx, options) {
   this.mousedown = false;
   this.activeBeats = [];
   this.hitBeats = {};
-  this.score = 0;
-  this.audioURL = options.audioURL;
+  this.score = 0; //   this.audioURL = options.audioURL;
+
   this.volume = options.volume / 100;
   this.mute = options.mute;
   this.restart = false;
@@ -8773,13 +8774,10 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
   var volumeInputStart = document.getElementById("volume-start");
   var volumeInputSongs = document.getElementById("volume-songs");
   volumeButtonGame.addEventListener("click", function () {
-    // console.log("in volume event")
     if (volumeInputGame.className === "hidden") {
-      // console.log("in hidden")
       volumeInputGame.classList.remove("hidden");
       muteButtonGame.classList.remove("hidden");
     } else {
-      // console.log("in not hidden")
       volumeInputGame.classList.add("hidden");
       muteButtonGame.classList.add("hidden");
     }
@@ -8995,10 +8993,9 @@ GameView.prototype.animate = function animate(time) {
     this.unpause = false;
   }
 
-  this.lastTime = time - this.startTime - this.pausedTime; // document.getElementById("time").innerHTML = Math.floor(this.lastTime);
-
+  this.lastTime = time - this.startTime - this.pausedTime;
+  this.ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
   document.getElementById("score").innerHTML = "Score ".concat(Math.floor(this.score));
-  this.game.draw(this.ctx);
 
   if (this.game.beats.length !== 0) {
     this.game.beats.forEach(function (beat, idx) {
@@ -9248,62 +9245,71 @@ document.addEventListener("DOMContentLoaded", function () {
     checkCurrent(current);
   }
 
+  var songchoice = 1;
+
   function checkCurrent(current) {
     if (current === 0) {
       canvasElement.className = "song-choice-1";
       beatmap = Beatmap1;
+      songchoice = 1;
       audioURL = "./src/assets/sounds/1. Cut Your Teeth by Kyla La Grange (Kygo Remix).mp3";
     } else if (current === -100) {
       canvasElement.className = "song-choice-2";
       beatmap = Beatmap2;
+      songchoice = 2;
       audioURL = "./src/assets/sounds/2. トルコ行進曲 by T.M. Orchestra.mp3";
     } else if (current === -200) {
       canvasElement.className = "song-choice-3";
       beatmap = Beatmap3;
+      songchoice = 3;
       audioURL = "./src/assets/sounds/3. さよならトリップ by Dormir.mp3";
     } else if (current === -300) {
       canvasElement.className = "song-choice-4";
       beatmap = Beatmap4;
+      songchoice = 4;
       audioURL = "./src/assets/sounds/4. Mario Brothers Theme.mp3";
     } else if (current === -400) {
       canvasElement.className = "song-choice-5";
       beatmap = Beatmap5;
+      songchoice = 5;
       audioURL = "./src/assets/sounds/5. Theory of Eternity by TAG.mp3";
     } else if (current === -500) {
       canvasElement.className = "song-choice-6";
       beatmap = Beatmap6;
+      songchoice = 6;
       audioURL = "./src/assets/sounds/6. Don't Give Up On Me Now by R3HAB and Julie Bergan.mp3";
     } else if (current === -600) {
       canvasElement.className = "song-choice-7";
       beatmap = Beatmap7;
+      songchoice = 7;
       audioURL = "./src/assets/sounds/7. もののけ姫 by 新井大樹.mp3";
     } else if (current === -700) {
       canvasElement.className = "song-choice-8";
       beatmap = Beatmap8;
+      songchoice = 8;
       audioURL = "./src/assets/sounds/8. Polygon by Sota Fujimori.mp3";
     } else if (current === -800) {
       canvasElement.className = "song-choice-9";
       beatmap = Beatmap9;
+      songchoice = 9;
       audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
     } else if (current === -900) {
       canvasElement.className = "song-choice-10";
       beatmap = Beatmap10;
+      songchoice = 10; // const game10 = new Game(Beatmap10);
+      // beatmap = game10;
+
       audioURL = "./src/assets/sounds/10. Country Rounds by Kings & Folks (Sqeepo Remix) .mp3";
     }
-  } // let autoChange = setInterval(changeSong, delay);
-  // const restart = function () {
-  //   clearInterval(autoChange);
-  //   autoChange = setInterval(changeSong, delay);
-  // };
-
+  }
 
   var nextSongButton = document.getElementById("next-btn");
   nextSongButton.addEventListener("click", function () {
-    changeSong(); // restart();
+    changeSong();
   });
   var prevSongButton = document.getElementById("prev-btn");
   prevSongButton.addEventListener("click", function () {
-    changeSong(false); // restart();
+    changeSong(false);
   });
   startMenuButton.addEventListener("click", function () {
     startMenu.classList.remove("hidden");
@@ -9316,20 +9322,20 @@ document.addEventListener("DOMContentLoaded", function () {
       direction: "normal",
       delay: anime.stagger(500)
     });
-  }); //set game area
-
+  });
   canvasElement.width = window.innerWidth;
-  canvasElement.height = window.innerHeight; //start new game
+  canvasElement.height = window.innerHeight;
+  ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+  ctx.globalAlpha = 1; //start new game
 
   var audioObj = new Audio(audioURL);
+  var gameview = {};
   startButton.addEventListener("click", function () {
     startMenu.classList.add("hidden");
     songsMenu.classList.add("hidden");
     gameContainer.classList.remove("hidden");
     checkCurrent(current);
-    console.log(beatmap);
     var game = new Game(beatmap);
-    console.log(game);
     audioObj.setAttribute('src', audioURL);
     audioObj.load();
     var gv_options = {
@@ -9337,7 +9343,13 @@ document.addEventListener("DOMContentLoaded", function () {
       volume: volumeLvl,
       mute: mute
     };
-    var gameview = new GameView(game, ctx, gv_options).start();
+
+    if (gameview[songchoice]) {
+      gameview[songchoice].restartGame();
+    } else {
+      gameview[songchoice] = new GameView(game, ctx, gv_options);
+      gameview[songchoice].start();
+    }
   });
   exitGameButton.addEventListener("click", function () {
     volumeLvl = audioObj.volume * 100;
