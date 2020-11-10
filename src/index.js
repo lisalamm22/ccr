@@ -36,6 +36,11 @@ document.addEventListener("DOMContentLoaded", function () {
   const ctx = canvasElement.getContext("2d");
   window.ctx = ctx;
 
+  const cursor = document.querySelector(".cursor")
+  document.addEventListener('mousemove', e => {
+    cursor.setAttribute("style", "top: " + (e.pageY-10)+"px; left: "+ (e.pageX-10)+"px;")
+  })
+
   anime({
     targets: ".start-option",
     width: "100%",
@@ -73,18 +78,22 @@ document.addEventListener("DOMContentLoaded", function () {
       volumeInputStart.value = 0;
       volumeInputSongs.value = 0;
       volumeInputGame.value = 0;
+      audioSnip.volume = 0;
     }
     else{
       mute = false;
       volumeInputStart.value = volumeLvl
       volumeInputSongs.value = volumeLvl
       volumeInputGame.value = volumeLvl
+      audioSnip.volume = volumeLvl/100
     }
   })
 
   volumeInputStart.addEventListener("change", (e) => {
     volumeLvl = e.target.value;
     volumeInputSongs.value = volumeLvl;
+    volumeInputGame.value = volumeLvl;
+    audioSnip.volume = volumeLvl/100;
   });
 
   volumeButtonSongs.addEventListener("click", () => {
@@ -104,19 +113,22 @@ document.addEventListener("DOMContentLoaded", function () {
       volumeInputStart.value = 0;
       volumeInputSongs.value = 0;
       volumeInputGame.value = 0;
+      audioSnip.volume = 0;
     }
     else {
       mute = false;
       volumeInputStart.value = volumeLvl
       volumeInputSongs.value = volumeLvl
       volumeInputGame.value = volumeLvl
+      audioSnip.volume = volumeLvl/100
     }
   })
 
   volumeInputSongs.addEventListener("change", (e) => {
     volumeLvl = e.target.value;
     volumeInputStart.value = volumeLvl;
-    // volumeInputSongs.className = "hidden"
+    volumeInputGame.value = volumeLvl;
+    audioSnip.volume = volumeLvl/100;
   });
 
   instructButton.addEventListener("click", () => {
@@ -130,45 +142,63 @@ document.addEventListener("DOMContentLoaded", function () {
   })
   
   //song selection
-  songsButton.addEventListener("click", () => {
-    startMenu.classList.add("hidden");
-    songsMenu.classList.remove("hidden");
-    gameContainer.classList.add("hidden");
-    canvasElement.className = "song-choice-1";
-    anime({
-      targets: ".start-option",
-      width: "0%",
-      direction: "normal",
-    });
-  });
   // anime({
-  //   targets: "#start-btn",
-  //   scale: 1.1,
-  //   direction: "alternate",
-  //   easing: 'easeInOutSine',
-  //   loop: true,
-  // })
-
-  // const delay = 3000; //ms
-
-  const songs = document.querySelector(".song-options");
-  const songCount = songs.childElementCount;
-  const maxLeft = (songCount - 1) * 100 * -1;
-
-  let current = 0;
-  let audioURL = "./src/assets/sounds/1. Cut Your Teeth by Kyla La Grange (Kygo Remix).mp3";
-  let beatmap = Beatmap1;
+    //   targets: "#start-btn",
+    //   scale: 1.1,
+    //   direction: "alternate",
+    //   easing: 'easeInOutSine',
+    //   loop: true,
+    // })
+    
+    const songs = document.querySelector(".song-options");
+    const songCount = songs.childElementCount;
+    const maxLeft = (songCount - 1) * 100 * -1;
+    
+    let current = 0;
+    let songchoice = 1;
+    let audioURL = "./src/assets/sounds/1. Cut Your Teeth by Kyla La Grange (Kygo Remix).mp3";
+    let beatmap = Beatmap1;
+    let audioSnip = new Audio(audioURL);
+    audioSnip.volume = volumeLvl/100;
+    
+    songsButton.addEventListener("click", () => {
+      startMenu.classList.add("hidden");
+      songsMenu.classList.remove("hidden");
+      gameContainer.classList.add("hidden");
+      canvasElement.className = "song-choice-1";
+      audioSnip.currentTime = 0;
+      audioSnip.play();
+      replayAudioSnip();
+      anime({
+        targets: ".start-option",
+        width: "0%",
+        direction: "normal",
+      });
+    });
+    
+  function replayAudioSnip() {
+    setTimeout(function(){
+      audioSnip.currentTime = 0;
+      replayAudioSnip();
+    },30000)
+  }
+  
   function changeSong(next = true) {
     if (next) {
       current += current > maxLeft ? -100 : current * -1;
     } else {
       current = current < 0 ? current + 100 : maxLeft;
     }
-
+    
     songs.style.left = current + "%";
     checkCurrent(current);
+    audioSnip.pause();
+    audioSnip.setAttribute("src", audioURL);
+    audioSnip.load();
+    audioSnip.currentTime = 0;
+    audioSnip.play();
   }
-  let songchoice = 1;
+  
   function checkCurrent(current){
     if(current === 0) {
       canvasElement.className = "song-choice-1";
@@ -237,8 +267,6 @@ document.addEventListener("DOMContentLoaded", function () {
       canvasElement.className = "song-choice-10";
       beatmap = Beatmap10;
       songchoice = 10;
-      // const game10 = new Game(Beatmap10);
-      // beatmap = game10;
       audioURL =
         "./src/assets/sounds/10. Country Rounds by Kings & Folks (Sqeepo Remix) .mp3";
     }
@@ -258,6 +286,7 @@ document.addEventListener("DOMContentLoaded", function () {
     startMenu.classList.remove("hidden");
     songsMenu.classList.add("hidden");
     gameContainer.classList.add("hidden");
+    audioSnip.pause();
     anime({
       targets: ".start-option",
       width: "100%",
@@ -281,6 +310,7 @@ document.addEventListener("DOMContentLoaded", function () {
     gameContainer.classList.remove("hidden");
     checkCurrent(current);
     const game = new Game(beatmap);
+    audioSnip.pause();
     audioObj.setAttribute('src', audioURL)
     audioObj.load()
     let gv_options = {
