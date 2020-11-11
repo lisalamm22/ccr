@@ -9,7 +9,8 @@ function GameView(game, ctx, options) {
   this.activeBeats = [];
   this.hitBeats = {};
   this.score = 0;
-//   this.audioURL = options.audioURL;
+  this.combo = 0;
+  this.maxCombo = 0;
   this.volume = (options.volume/100);
   this.mute = options.mute;
   this.restart = false;
@@ -77,20 +78,6 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
         }
     })
 
-    GameView.prototype.pauseGame = function pauseGame() {
-        this.pause = true;
-        this.audioObj.pause();
-        pauseButton.classList.add("hidden");
-        unpauseButton.classList.remove("hidden");
-    }
-    GameView.prototype.unpauseGame = function unpauseGame() {
-        this.unpause = true;
-        this.audioObj.play();
-        unpauseButton.classList.add("hidden");
-        pauseButton.classList.remove("hidden");
-        requestAnimationFrame(this.animate.bind(this));
-    }
-
     const volumeButtonGame = document.getElementById("volume-btn-GV");
     const volumeInputGame = document.getElementById("volume-GV");
     const muteButtonGame = document.getElementById("mute-GV")
@@ -131,7 +118,34 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
         volumeInputStart.value = e.target.value;
         volumeInputSongs.value = e.target.value;
     })
+
+    const finalScore = document.querySelector(".final-score")
+    this.audioObj.addEventListener("ended", () => {
+        finalScore.classList.remove("hidden")
+        document.getElementById("final-score").innerHTML = `Score ${Math.floor(this.score)}`;
+        document.getElementById("max-combo").innerHTML = `Combos ${this.maxCombo}`;
+    })
+
+    const replayButton = document.getElementById("replay-btn")
+    replayButton.addEventListener("click", () => {
+        finalScore.classList.add("hidden")
+        this.restartGame();
+    })
 }
+
+GameView.prototype.pauseGame = function pauseGame() {
+    this.pause = true;
+    this.audioObj.pause();
+    pauseButton.classList.add("hidden");
+    unpauseButton.classList.remove("hidden");
+};
+GameView.prototype.unpauseGame = function unpauseGame() {
+    this.unpause = true;
+    this.audioObj.play();
+    unpauseButton.classList.add("hidden");
+    pauseButton.classList.remove("hidden");
+    requestAnimationFrame(this.animate.bind(this));
+};
 
 GameView.prototype.isActiveBeat = function isActiveBeat(beat, idx, time){
     if (Math.abs(beat.time - time) <= 1000) {
@@ -151,6 +165,14 @@ GameView.prototype.isActiveBeat = function isActiveBeat(beat, idx, time){
 }
 
 GameView.prototype.checkClick = function checkClick(activeBeat, idx){
+  if (idx === 0){
+      this.combo += 1;
+  }
+  else{
+      if(this.combo > this.maxCombo){ this.maxCombo = this.combo}
+      this.combo = 0;
+  }
+
   if (Util.dist(this.click, activeBeat.pos) < activeBeat.radius) {
     let hitBeat = this.activeBeats.splice(idx, 1)[0];
     let hitBeatStr = JSON.stringify(hitBeat);
@@ -184,7 +206,7 @@ GameView.prototype.checkDrag = function checkDrag(dragBeat, time){
 }
 
 GameView.prototype.drawHitBeat = function drawHitBeat(ctx, beat, hitTime, time){
-    const timeDelta =  time - hitTime; // 1000-2000
+    const timeDelta =  time - hitTime; 
     const timeToFade = 1000
 
     if(timeDelta < timeToFade){
@@ -308,6 +330,7 @@ GameView.prototype.restartGame = function restartGame() {
     this.beatIdx = 0;
     this.activeBeats = [];
     this.hitBeats = {};
+    this.combo = 0;
     this.score = 0;
     this.restart = false;
     this.pause = false;
@@ -325,6 +348,7 @@ GameView.prototype.animate = function animate(time) {
     this.lastTime = time - this.startTime - this.pausedTime;
     this.ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
     document.getElementById("score").innerHTML = `Score ${Math.floor(this.score)}`;
+    document.getElementById("combo").innerHTML = `Combos ${this.combo}`;
     if (this.game.beats.length !== 0) {
         this.game.beats.forEach((beat, idx) => {
             this.isActiveBeat(beat, idx, this.lastTime)

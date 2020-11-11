@@ -8681,6 +8681,7 @@ module.exports = Game;
   \**************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 374:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Util = __webpack_require__(/*! ./util */ "./src/util.js"); // const anime = require("animejs");
@@ -8693,8 +8694,9 @@ function GameView(game, ctx, options) {
   this.mousedown = false;
   this.activeBeats = [];
   this.hitBeats = {};
-  this.score = 0; //   this.audioURL = options.audioURL;
-
+  this.score = 0;
+  this.combo = 0;
+  this.maxCombo = 0;
   this.volume = options.volume / 100;
   this.mute = options.mute;
   this.restart = false;
@@ -8763,22 +8765,6 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
       _this.unpauseGame();
     }
   });
-
-  GameView.prototype.pauseGame = function pauseGame() {
-    this.pause = true;
-    this.audioObj.pause();
-    pauseButton.classList.add("hidden");
-    unpauseButton.classList.remove("hidden");
-  };
-
-  GameView.prototype.unpauseGame = function unpauseGame() {
-    this.unpause = true;
-    this.audioObj.play();
-    unpauseButton.classList.add("hidden");
-    pauseButton.classList.remove("hidden");
-    requestAnimationFrame(this.animate.bind(this));
-  };
-
   var volumeButtonGame = document.getElementById("volume-btn-GV");
   var volumeInputGame = document.getElementById("volume-GV");
   var muteButtonGame = document.getElementById("mute-GV");
@@ -8814,6 +8800,33 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
     volumeInputStart.value = e.target.value;
     volumeInputSongs.value = e.target.value;
   });
+  var finalScore = document.querySelector(".final-score");
+  this.audioObj.addEventListener("ended", function () {
+    finalScore.classList.remove("hidden");
+    document.getElementById("final-score").innerHTML = "Score ".concat(Math.floor(_this.score));
+    document.getElementById("max-combo").innerHTML = "Combos ".concat(_this.maxCombo);
+  });
+  var replayButton = document.getElementById("replay-btn");
+  replayButton.addEventListener("click", function () {
+    finalScore.classList.add("hidden");
+
+    _this.restartGame();
+  });
+};
+
+GameView.prototype.pauseGame = function pauseGame() {
+  this.pause = true;
+  this.audioObj.pause();
+  pauseButton.classList.add("hidden");
+  unpauseButton.classList.remove("hidden");
+};
+
+GameView.prototype.unpauseGame = function unpauseGame() {
+  this.unpause = true;
+  this.audioObj.play();
+  unpauseButton.classList.add("hidden");
+  pauseButton.classList.remove("hidden");
+  requestAnimationFrame(this.animate.bind(this));
 };
 
 GameView.prototype.isActiveBeat = function isActiveBeat(beat, idx, time) {
@@ -8834,6 +8847,16 @@ GameView.prototype.isActiveBeat = function isActiveBeat(beat, idx, time) {
 };
 
 GameView.prototype.checkClick = function checkClick(activeBeat, idx) {
+  if (idx === 0) {
+    this.combo += 1;
+  } else {
+    if (this.combo > this.maxCombo) {
+      this.maxCombo = this.combo;
+    }
+
+    this.combo = 0;
+  }
+
   if (Util.dist(this.click, activeBeat.pos) < activeBeat.radius) {
     var hitBeat = this.activeBeats.splice(idx, 1)[0];
     var hitBeatStr = JSON.stringify(hitBeat);
@@ -8864,8 +8887,7 @@ GameView.prototype.checkDrag = function checkDrag(dragBeat, time) {
 };
 
 GameView.prototype.drawHitBeat = function drawHitBeat(ctx, beat, hitTime, time) {
-  var timeDelta = time - hitTime; // 1000-2000
-
+  var timeDelta = time - hitTime;
   var timeToFade = 1000;
 
   if (timeDelta < timeToFade) {
@@ -8987,6 +9009,7 @@ GameView.prototype.restartGame = function restartGame() {
   this.beatIdx = 0;
   this.activeBeats = [];
   this.hitBeats = {};
+  this.combo = 0;
   this.score = 0;
   this.restart = false;
   this.pause = false;
@@ -9007,6 +9030,7 @@ GameView.prototype.animate = function animate(time) {
   this.lastTime = time - this.startTime - this.pausedTime;
   this.ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
   document.getElementById("score").innerHTML = "Score ".concat(Math.floor(this.score));
+  document.getElementById("combo").innerHTML = "Combos ".concat(this.combo);
 
   if (this.game.beats.length !== 0) {
     this.game.beats.forEach(function (beat, idx) {
@@ -9140,7 +9164,7 @@ document.addEventListener("DOMContentLoaded", function () {
   var ctx = canvasElement.getContext("2d");
   window.ctx = ctx;
   var cursor = document.querySelector(".cursor");
-  document.addEventListener('mousemove', function (e) {
+  document.addEventListener("mousemove", function (e) {
     cursor.setAttribute("style", "top: " + (e.pageY - 10) + "px; left: " + (e.pageX - 10) + "px;");
   });
   anime({
@@ -9374,7 +9398,7 @@ document.addEventListener("DOMContentLoaded", function () {
     checkCurrent(current);
     var game = new Game(beatmap);
     audioSnip.pause();
-    audioObj.setAttribute('src', audioURL);
+    audioObj.setAttribute("src", audioURL);
     audioObj.load();
     var gv_options = {
       audioObj: audioObj,
@@ -9392,6 +9416,23 @@ document.addEventListener("DOMContentLoaded", function () {
   exitGameButton.addEventListener("click", function () {
     volumeLvl = audioObj.volume * 100;
     audioObj.pause();
+    startMenu.classList.remove("hidden");
+    songsMenu.classList.add("hidden");
+    gameContainer.classList.add("hidden");
+    anime({
+      targets: ".start-option",
+      width: "100%",
+      easing: "easeInOutQuad",
+      direction: "normal",
+      delay: anime.stagger(500)
+    });
+  });
+  var finalScore = document.querySelector(".final-score");
+  var scoreDoneButton = document.getElementById("score-done-btn");
+  scoreDoneButton.addEventListener("click", function () {
+    volumeLvl = audioObj.volume * 100; // audioObj.pause();
+
+    finalScore.classList.add("hidden");
     startMenu.classList.remove("hidden");
     songsMenu.classList.add("hidden");
     gameContainer.classList.add("hidden");
