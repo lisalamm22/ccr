@@ -8681,7 +8681,6 @@ module.exports = Game;
   \**************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
-/*! CommonJS bailout: module.exports is used directly at 374:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Util = __webpack_require__(/*! ./util */ "./src/util.js"); // const anime = require("animejs");
@@ -9163,24 +9162,20 @@ document.addEventListener("DOMContentLoaded", function () {
   var canvasElement = document.getElementById("game-canvas");
   var ctx = canvasElement.getContext("2d");
   window.ctx = ctx;
-  var cursor = document.querySelector(".cursor");
-  document.addEventListener("mousemove", function (e) {
-    cursor.setAttribute("style", "top: " + (e.pageY - 10) + "px; left: " + (e.pageX - 10) + "px;");
-  });
   anime({
     targets: ".start-option",
     width: "100%",
     easing: "easeInOutQuad",
     direction: "normal",
     delay: anime.stagger(500)
-  }); // anime({
-  //   targets:".title",
-  //   scale: 1.02,
-  //   direction: "alternate",
-  //   easing: 'easeInOutSine',
-  //   loop: true,
-  // })
-  //volume
+  });
+  anime({
+    targets: ".title",
+    scale: 1.02,
+    direction: "alternate",
+    easing: 'easeInOutSine',
+    loop: true
+  }); //volume
 
   var volumeLvl = 50;
   var mute = false;
@@ -9251,15 +9246,15 @@ document.addEventListener("DOMContentLoaded", function () {
   instructionsDoneButton.addEventListener("click", function () {
     instructions.classList.add("hidden");
     instructionsDoneButton.classList.add("hidden");
-  }); //song selection
-  // anime({
-  //   targets: "#start-btn",
-  //   scale: 1.1,
-  //   direction: "alternate",
-  //   easing: 'easeInOutSine',
-  //   loop: true,
-  // })
+  }); // song selection
 
+  anime({
+    targets: "#start-btn",
+    scale: 1.1,
+    direction: "alternate",
+    easing: 'easeInOutSine',
+    loop: true
+  });
   var songs = document.querySelector(".song-options");
   var songCount = songs.childElementCount;
   var maxLeft = (songCount - 1) * 100 * -1;

@@ -36,14 +36,6 @@ document.addEventListener("DOMContentLoaded", function () {
   const ctx = canvasElement.getContext("2d");
   window.ctx = ctx;
 
-  const cursor = document.querySelector(".cursor");
-  document.addEventListener("mousemove", (e) => {
-    cursor.setAttribute(
-      "style",
-      "top: " + (e.pageY - 10) + "px; left: " + (e.pageX - 10) + "px;"
-    );
-  });
-
   anime({
     targets: ".start-option",
     width: "100%",
@@ -52,13 +44,13 @@ document.addEventListener("DOMContentLoaded", function () {
     delay: anime.stagger(500),
   });
 
-  // anime({
-  //   targets:".title",
-  //   scale: 1.02,
-  //   direction: "alternate",
-  //   easing: 'easeInOutSine',
-  //   loop: true,
-  // })
+  anime({
+    targets:".title",
+    scale: 1.02,
+    direction: "alternate",
+    easing: 'easeInOutSine',
+    loop: true,
+  })
 
   //volume
   let volumeLvl = 50;
@@ -140,14 +132,14 @@ document.addEventListener("DOMContentLoaded", function () {
     instructionsDoneButton.classList.add("hidden");
   });
 
-  //song selection
-  // anime({
-  //   targets: "#start-btn",
-  //   scale: 1.1,
-  //   direction: "alternate",
-  //   easing: 'easeInOutSine',
-  //   loop: true,
-  // })
+  // song selection
+  anime({
+    targets: "#start-btn",
+    scale: 1.1,
+    direction: "alternate",
+    easing: 'easeInOutSine',
+    loop: true,
+  })
 
   const songs = document.querySelector(".song-options");
   const songCount = songs.childElementCount;

@@ -9,17 +9,6 @@ body{
   margin: 0 auto;
   overflow: hidden;
   cursor: url("../images/icons8-round (1).svg") 25 25, auto;
-  /* cursor: none; */
-}
-
-.cursor{
-  /* width: 20px;
-  height: 20px;
-  border: 1px solid white;
-  border-radius: 50%;
-  box-shadow: 0 0px 30px 10px rgba(255, 255, 255, 0.5);
-  position: absolute; */
-  display: none;
 }
 
 .game{
