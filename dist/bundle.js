@@ -8681,6 +8681,7 @@ module.exports = Game;
   \**************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
+/*! CommonJS bailout: module.exports is used directly at 374:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Util = __webpack_require__(/*! ./util */ "./src/util.js"); // const anime = require("animejs");
@@ -8803,7 +8804,7 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
   this.audioObj.addEventListener("ended", function () {
     finalScore.classList.remove("hidden");
     document.getElementById("final-score").innerHTML = "Score ".concat(Math.floor(_this.score));
-    document.getElementById("max-combo").innerHTML = "Combos ".concat(_this.maxCombo);
+    document.getElementById("max-combo").innerHTML = "Max Combo ".concat(_this.maxCombo);
   });
   var replayButton = document.getElementById("replay-btn");
   replayButton.addEventListener("click", function () {
@@ -8811,21 +8812,21 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
 
     _this.restartGame();
   });
-};
 
-GameView.prototype.pauseGame = function pauseGame() {
-  this.pause = true;
-  this.audioObj.pause();
-  pauseButton.classList.add("hidden");
-  unpauseButton.classList.remove("hidden");
-};
+  GameView.prototype.pauseGame = function pauseGame() {
+    this.pause = true;
+    this.audioObj.pause();
+    pauseButton.classList.add("hidden");
+    unpauseButton.classList.remove("hidden");
+  };
 
-GameView.prototype.unpauseGame = function unpauseGame() {
-  this.unpause = true;
-  this.audioObj.play();
-  unpauseButton.classList.add("hidden");
-  pauseButton.classList.remove("hidden");
-  requestAnimationFrame(this.animate.bind(this));
+  GameView.prototype.unpauseGame = function unpauseGame() {
+    this.unpause = true;
+    this.audioObj.play();
+    unpauseButton.classList.add("hidden");
+    pauseButton.classList.remove("hidden");
+    requestAnimationFrame(this.animate.bind(this));
+  };
 };
 
 GameView.prototype.isActiveBeat = function isActiveBeat(beat, idx, time) {

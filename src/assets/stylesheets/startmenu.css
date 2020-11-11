@@ -12,6 +12,10 @@
   color: white;
 }
 
+.links div:hover a{
+  transform: scale(1.1)
+}
+
 .links a>i{
   font-size: 75px;
 }

@@ -123,7 +123,7 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
     this.audioObj.addEventListener("ended", () => {
         finalScore.classList.remove("hidden")
         document.getElementById("final-score").innerHTML = `Score ${Math.floor(this.score)}`;
-        document.getElementById("max-combo").innerHTML = `Combos ${this.maxCombo}`;
+        document.getElementById("max-combo").innerHTML = `Max Combo ${this.maxCombo}`;
     })
 
     const replayButton = document.getElementById("replay-btn")
@@ -131,20 +131,21 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
         finalScore.classList.add("hidden")
         this.restartGame();
     })
-}
 
-GameView.prototype.pauseGame = function pauseGame() {
-    this.pause = true;
-    this.audioObj.pause();
-    pauseButton.classList.add("hidden");
-    unpauseButton.classList.remove("hidden");
-};
-GameView.prototype.unpauseGame = function unpauseGame() {
-    this.unpause = true;
-    this.audioObj.play();
-    unpauseButton.classList.add("hidden");
-    pauseButton.classList.remove("hidden");
-    requestAnimationFrame(this.animate.bind(this));
+    GameView.prototype.pauseGame = function pauseGame() {
+        this.pause = true;
+        this.audioObj.pause();
+        pauseButton.classList.add("hidden");
+        unpauseButton.classList.remove("hidden");
+    };
+    GameView.prototype.unpauseGame = function unpauseGame() {
+        this.unpause = true;
+        this.audioObj.play();
+        unpauseButton.classList.add("hidden");
+        pauseButton.classList.remove("hidden");
+        requestAnimationFrame(this.animate.bind(this));
+    }
+
 };
 
 GameView.prototype.isActiveBeat = function isActiveBeat(beat, idx, time){
