@@ -56,6 +56,11 @@ The ```GameView``` delegates rendering and passes on the proper parameters to th
 Since timing is crucial, dynamic rings guide the player to the optimal timing to hit a ```Beat```. 
 Once a ```Beat``` is hit in the proper active time, the player receives visual feedback indicating a success. 
 ```js
+// check what stage of display Beat is in and draw based on current time
+const timeDelta =  time - beat.time;
+const beatTime = 1000
+const activeBeatT = 500
+const inactiveBeatT = beatTime - activeBeatT
 if (Math.abs(timeDelta) <= beatTime) {    
     if(Object.keys(this.hitBeats).includes(JSON.stringify(beat))){
         let hitTime = this.hitBeats[JSON.stringify(beat)]
