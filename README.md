@@ -53,8 +53,8 @@ const Beatmap = [
 
 ### Displaying Beats
 The ```GameView``` delegates rendering and passes on the proper parameters to the ```Beat```. 
-Since timing is crucial, dynamic rings guide the player to the optimal timing to hit a beat. 
-Once a beat is hit in the proper active time, the player receives visual feedback indicating a success. 
+Since timing is crucial, dynamic rings guide the player to the optimal timing to hit a ```Beat```. 
+Once a ```Beat``` is hit in the proper active time, the player receives visual feedback indicating a success. 
 ```js
 if (Math.abs(timeDelta) <= beatTime) {    
     if(Object.keys(this.hitBeats).includes(JSON.stringify(beat))){
