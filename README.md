@@ -10,9 +10,9 @@ Players will receive visual circular prompts that indicate where to aim the curs
 
 ## Implementation
 ### Game Rendering
-A ```js GameView ``` class renders the game, using a ```js requestAnimationFrame ``` loop to maintain a constant 60fps refresh rate. 
-The GameView keeps track of all game objects including the Beat, audio element, and player position/activity.
-The GameView is responsible for checking the success of a players click/keypress for beats that are active.
+A ```GameView ``` class renders the game, using a ```requestAnimationFrame ``` loop to maintain a constant 60fps refresh rate. 
+The ```GameView``` keeps track of all game objects including the ```Beat```, audio element, and player position/activity.
+The ```GameView``` is responsible for checking the success of a players click/keypress for beats that are active.
 ```js
 //iterate through beatmap to find activebeats and draw on canvas
 this.game.redraw(this.ctx);
@@ -40,7 +40,7 @@ if (this.restart){
 ```
 
 ### Beatmaps
-The game canvas sizes itself dynamically based on window.innerWidth and window.innerHeight. To ensure beatmaps display at scale, positions for each beat are scalar values rather than absolute values:
+The game canvas sizes itself dynamically based on ```window.innerWidth``` and ```window.innerHeight```. To ensure beatmaps display at scale, positions for each beat are scalar values rather than absolute values:
 ```js
 const Beatmap = [
     { pos: [0.5, 0.5], time: 2410},
@@ -52,7 +52,7 @@ const Beatmap = [
 ```
 
 ### Displaying Beats
-The GameView delegates rendering and passes on the proper parameters to the Beat. 
+The ```GameView``` delegates rendering and passes on the proper parameters to the ```Beat```. 
 Since timing is crucial, dynamic rings guide the player to the optimal timing to hit a beat. 
 Once a beat is hit in the proper active time, the player receives visual feedback indicating a success. 
 ```js
