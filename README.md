@@ -1,6 +1,6 @@
 # Click Click Revolution
 
-[CCR Live](https://lisalamm22.github.io/ccr/)
+[Play CCR!](https://lisalamm22.github.io/ccr/)
 
 CCR is a rhythm game that requires precise mouse movements and keypress timing. Integrates object-oriented Javascript game structure with smooth rendering of HTML5 canvas and HTML5 audio elements to foster an immersive and upbeat game environment.
 ![CCR](https://user-images.githubusercontent.com/68566126/98774000-f0ff4c00-239e-11eb-9a36-0fe05efcc900.png)
@@ -9,7 +9,7 @@ CCR is a rhythm game that requires precise mouse movements and keypress timing. 
 Players will receive visual circular prompts that indicate where to aim the cursor and when to press. These prompts correspond with the beats of the audio and timing of the keypress is essential to scoring high.
 
 ## Implementation
-###Game Rendering
+### Game Rendering
 A ```js GameView ``` class renders the game, using a ```js requestAnimationFrame ``` loop to maintain a constant 60fps refresh rate. 
 The GameView keeps track of all game objects including the Beat, audio element, and player position/activity.
 The GameView is responsible for checking the success of a players click/keypress for beats that are active.
@@ -73,5 +73,8 @@ if (Math.abs(timeDelta) <= beatTime) {
 
 ## Future Improvements
 ### More Shapes
+New shapes of beats besides a static click or drag would add more variety and difficulty to beatmaps. 
 
 ### Automating Beatmap Generation
+Creating beatmaps manually is time consuming and not very precise. Adding automation would increase the quality of each beatmap.
+Increased efficiency would also allow for ease of creating new beatmaps and therefore increasing the selection of playable levels.
