@@ -41,7 +41,7 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
         }
     });
     window.addEventListener("mousedown", (e)=>{
-        // console.log(`X: ${(e.clientX/window.innerWidth).toFixed(2)} Y: ${(e.clientY/window.innerHeight).toFixed(2)} Time: ${Math.floor(this.lastTime)}`)
+        console.log(`X: ${(e.clientX/window.innerWidth).toFixed(2)} Y: ${(e.clientY/window.innerHeight).toFixed(2)} Time: ${Math.floor(this.lastTime)}`)
         const canvasElement = document.getElementById("game-canvas");
         this.click[0] = e.clientX - (window.innerWidth - canvasElement.width)/2;
         this.click[1] = e.clientY - (window.innerHeight - canvasElement.height) / 2;
@@ -57,6 +57,8 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
 
     const restartButton = document.getElementById("restart-btn");
     restartButton.addEventListener("click", ()=> {
+        unpauseButton.classList.add("hidden");
+        pauseButton.classList.remove("hidden");
         this.restart = true;
         this.restartGame();
     })
@@ -165,21 +167,20 @@ GameView.prototype.isActiveBeat = function isActiveBeat(beat, idx, time){
     }
 }
 
-GameView.prototype.checkClick = function checkClick(activeBeat, idx){
-  if (idx === 0){
-      this.combo += 1;
-  }
-  else{
-      if(this.combo > this.maxCombo){ this.maxCombo = this.combo}
-      this.combo = 0;
-  }
-
-  if (Util.dist(this.click, activeBeat.pos) < activeBeat.radius) {
-    let hitBeat = this.activeBeats.splice(idx, 1)[0];
-    let hitBeatStr = JSON.stringify(hitBeat);
-    this.hitBeats[hitBeatStr] = this.lastTime;
-    this.scoreHit(hitBeat);
-  }
+GameView.prototype.checkClick = function checkClick(activeBeat, idx){  
+    if (Util.dist(this.click, activeBeat.pos) < activeBeat.radius) {
+        let hitBeat = this.activeBeats.splice(idx, 1)[0];
+        let hitBeatStr = JSON.stringify(hitBeat);
+        this.hitBeats[hitBeatStr] = this.lastTime;
+        this.scoreHit(hitBeat);
+    }
+    if (idx === 0){
+        this.combo += 1;
+    }
+    else{
+        if(this.combo > this.maxCombo){ this.maxCombo = this.combo}
+        this.combo = 0;
+    }
 }
 
 GameView.prototype.checkDrag = function checkDrag(dragBeat, time){
@@ -347,7 +348,7 @@ GameView.prototype.animate = function animate(time) {
         this.unpause = false;
     }
     this.lastTime = time - this.startTime - this.pausedTime;
-    this.ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    this.game.redraw(this.ctx);
     document.getElementById("score").innerHTML = `Score ${Math.floor(this.score)}`;
     document.getElementById("combo").innerHTML = `Combos ${this.combo}`;
     if (this.game.beats.length !== 0) {

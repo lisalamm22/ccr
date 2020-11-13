@@ -12,8 +12,8 @@
   color: white;
 }
 
-.links div:hover a{
-  transform: scale(1.1)
+.links div:hover{
+  transform: scale(1.1);
 }
 
 .links a>i{

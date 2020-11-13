@@ -275,8 +275,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
   canvasElement.width = window.innerWidth;
   canvasElement.height = window.innerHeight;
-  ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-  ctx.globalAlpha = 1;
 
   //start new game
   let audioObj = new Audio(audioURL);

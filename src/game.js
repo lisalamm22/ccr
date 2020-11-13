@@ -1,21 +1,12 @@
 const Beat = require("./beat");
 
-Game.BG_COLOR = "#000000";
-Game.DIM_X = 1000;
-Game.DIM_Y = 600;
-
 function Game(beatmap) {
     this.beatmap = beatmap;
 }
 
-Game.prototype.draw = function draw(ctx) {
+Game.prototype.redraw = function redraw(ctx) {
   ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
   ctx.globalAlpha=1;
-//   background = new Image();
-//   background.src = this.imageURL;
-//   ctx.drawImage(background,0,0)
-//   ctx.fillStyle = Game.BG_COLOR;
-//   ctx.fillRect(0, 0, Game.DIM_X, Game.DIM_Y);
 };
 
 Game.prototype.checkSeq = function checkSeq(){

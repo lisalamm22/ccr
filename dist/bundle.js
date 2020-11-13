@@ -8608,21 +8608,13 @@ module.exports = Beat;
 
 var Beat = __webpack_require__(/*! ./beat */ "./src/beat.js");
 
-Game.BG_COLOR = "#000000";
-Game.DIM_X = 1000;
-Game.DIM_Y = 600;
-
 function Game(beatmap) {
   this.beatmap = beatmap;
 }
 
-Game.prototype.draw = function draw(ctx) {
+Game.prototype.redraw = function redraw(ctx) {
   ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-  ctx.globalAlpha = 1; //   background = new Image();
-  //   background.src = this.imageURL;
-  //   ctx.drawImage(background,0,0)
-  //   ctx.fillStyle = Game.BG_COLOR;
-  //   ctx.fillRect(0, 0, Game.DIM_X, Game.DIM_Y);
+  ctx.globalAlpha = 1;
 };
 
 Game.prototype.checkSeq = function checkSeq() {
@@ -8681,7 +8673,7 @@ module.exports = Game;
   \**************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
-/*! CommonJS bailout: module.exports is used directly at 374:0-14 */
+/*! CommonJS bailout: module.exports is used directly at 376:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Util = __webpack_require__(/*! ./util */ "./src/util.js"); // const anime = require("animejs");
@@ -8746,6 +8738,8 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
   });
   var restartButton = document.getElementById("restart-btn");
   restartButton.addEventListener("click", function () {
+    unpauseButton.classList.add("hidden");
+    pauseButton.classList.remove("hidden");
     _this.restart = true;
 
     _this.restartGame();
@@ -8847,6 +8841,13 @@ GameView.prototype.isActiveBeat = function isActiveBeat(beat, idx, time) {
 };
 
 GameView.prototype.checkClick = function checkClick(activeBeat, idx) {
+  if (Util.dist(this.click, activeBeat.pos) < activeBeat.radius) {
+    var hitBeat = this.activeBeats.splice(idx, 1)[0];
+    var hitBeatStr = JSON.stringify(hitBeat);
+    this.hitBeats[hitBeatStr] = this.lastTime;
+    this.scoreHit(hitBeat);
+  }
+
   if (idx === 0) {
     this.combo += 1;
   } else {
@@ -8855,13 +8856,6 @@ GameView.prototype.checkClick = function checkClick(activeBeat, idx) {
     }
 
     this.combo = 0;
-  }
-
-  if (Util.dist(this.click, activeBeat.pos) < activeBeat.radius) {
-    var hitBeat = this.activeBeats.splice(idx, 1)[0];
-    var hitBeatStr = JSON.stringify(hitBeat);
-    this.hitBeats[hitBeatStr] = this.lastTime;
-    this.scoreHit(hitBeat);
   }
 };
 
@@ -9028,7 +9022,7 @@ GameView.prototype.animate = function animate(time) {
   }
 
   this.lastTime = time - this.startTime - this.pausedTime;
-  this.ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+  this.game.redraw(this.ctx);
   document.getElementById("score").innerHTML = "Score ".concat(Math.floor(this.score));
   document.getElementById("combo").innerHTML = "Combos ".concat(this.combo);
 
@@ -9381,9 +9375,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
   canvasElement.width = window.innerWidth;
-  canvasElement.height = window.innerHeight;
-  ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-  ctx.globalAlpha = 1; //start new game
+  canvasElement.height = window.innerHeight; //start new game
 
   var audioObj = new Audio(audioURL);
   var gameview = {};
