@@ -44,13 +44,13 @@ document.addEventListener("DOMContentLoaded", function () {
     delay: anime.stagger(500),
   });
 
-  anime({
-    targets:".title",
-    scale: 1.02,
-    direction: "alternate",
-    easing: 'easeInOutSine',
-    loop: true,
-  })
+  // anime({
+  //   targets:".title",
+  //   scale: 1.02,
+  //   direction: "alternate",
+  //   easing: 'easeInOutSine',
+  //   loop: true,
+  // })
 
   //volume
   let volumeLvl = 50;
@@ -133,13 +133,13 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   // song selection
-  anime({
-    targets: "#start-btn",
-    scale: 1.1,
-    direction: "alternate",
-    easing: 'easeInOutSine',
-    loop: true,
-  })
+  // anime({
+  //   targets: "#start-btn",
+  //   scale: 1.1,
+  //   direction: "alternate",
+  //   easing: 'easeInOutSine',
+  //   loop: true,
+  // })
 
   const songs = document.querySelector(".song-options");
   const songCount = songs.childElementCount;

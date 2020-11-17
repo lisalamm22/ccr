@@ -19,6 +19,7 @@ function GameView(game, ctx, options) {
   this.pausedTime = 0;
   this.audioObj = options.audioObj;
   this.audioObj.volume = this.mute ? 0 : this.volume;
+  this.restartCount = 0
 }
 GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
     document.getElementById("game-canvas").addEventListener("mousemove", (e) => {
@@ -27,17 +28,31 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
         this.y = e.clientY - (window.innerHeight - canvasElement.height) / 2;
     });
     window.addEventListener("keydown", (e)=>{
-        if(e.keyCode === 32){
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        if(e.code === "Space"){
+            console.log(`X: ${(this.x/window.innerWidth).toFixed(2)} Y: ${(this.y/window.innerHeight).toFixed(2)} Time: ${Math.floor(this.lastTime)}`)
             this.click[0]=this.x
             this.click[1]=this.y
+            this.mousedown = true;
             this.activeBeats.forEach((activeBeat, idx) => {
                 this.checkClick(activeBeat, idx)
             });
         }
     })
     window.addEventListener("keyup", (e) => {
-        if(e.keyCode === 32){
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        if(e.code === "Space"){
             this.mousedown = false;
+        }
+        if(e.code === "Escape" && !this.pause){
+            this.pauseGame();
+        }
+        else{
+            this.unpauseGame();
         }
     });
     window.addEventListener("mousedown", (e)=>{
@@ -69,15 +84,8 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
         this.pauseGame();
     })
     unpauseButton.addEventListener("click", ()=> {
+        this.lastTime -= (1000/60);
         this.unpauseGame();
-    })
-    window.addEventListener("keyup", (e) => {
-        if(e.keyCode === 27 && !this.pause){
-            this.pauseGame();
-        }
-        else{
-            this.unpauseGame();
-        }
     })
 
     const volumeButtonGame = document.getElementById("volume-btn-GV");
@@ -185,7 +193,7 @@ GameView.prototype.checkClick = function checkClick(activeBeat, idx){
 
 GameView.prototype.checkDrag = function checkDrag(dragBeat, time){
     const timeDelta = time - dragBeat.time;
-    const dragTime = (dragBeat.length * 1000) / 60;
+    const dragTime = (dragBeat.length * 1000) / 60 / 2;
     const activeBeatT = 500;
     if (timeDelta > activeBeatT && timeDelta <= dragTime){
         if (Util.dist([this.x, this.y], dragBeat.pos) < dragBeat.radius) {
@@ -225,7 +233,6 @@ GameView.prototype.drawBeat = function drawBeat(beat, time){
     const beatTime = 1000
     const activeBeatT = 500
     const inactiveBeatT = beatTime - activeBeatT
-    
     if (Math.abs(timeDelta) <= beatTime) {    
         if(Object.keys(this.hitBeats).includes(JSON.stringify(beat))){
             let hitTime = this.hitBeats[JSON.stringify(beat)]
@@ -261,13 +268,14 @@ GameView.prototype.drawDrag = function drawDrag(beat, time){
     const timeDelta =  time - beat.time;
     const inactiveBeatT = 500
     const activeBeatT = 500
-    const dragTime = beat.length*1000/60
+    const dragTime = beat.length*1000/60/2
+    const addDragTime = Math.max(0, (inactiveBeatT+activeBeatT-dragTime))
     const beatTime = inactiveBeatT + activeBeatT + dragTime
     let radiusMul;
     let opacity;
     
     if (-timeDelta <= inactiveBeatT + activeBeatT 
-        && timeDelta <= (inactiveBeatT + dragTime)) {
+        && timeDelta <= (inactiveBeatT + dragTime + addDragTime)) {
         if(timeDelta < -activeBeatT){
             radiusMul = (-(timeDelta+ inactiveBeatT)/ inactiveBeatT) + 2;
             opacity = (1+((timeDelta + inactiveBeatT) / inactiveBeatT));
@@ -275,16 +283,20 @@ GameView.prototype.drawDrag = function drawDrag(beat, time){
         else if(timeDelta < 0){
             radiusMul = (-(timeDelta+activeBeatT)/activeBeatT) + 2;
             opacity = 1;
-            beat.moveDragBeat(time);
+            beat.moveDragBeat(time, this.restartCount);
         }
         else if(timeDelta < dragTime){
             radiusMul = 1;
             opacity = 1;
-            beat.moveDragBeat(time);
+            beat.moveDragBeat(time, this.restartCount);
+        }
+        else if(timeDelta < 1000){
+            radiusMul = 1;
+            opacity = 1;
         }
         else{
             radiusMul = 1;
-            opacity = 1-((timeDelta - inactiveBeatT) / inactiveBeatT);
+            opacity = 1-((timeDelta-dragTime-addDragTime) / inactiveBeatT);
         }
         beat.drawDrag(this.ctx, opacity, radiusMul);
         beat.drawClick(this.ctx, opacity);
@@ -327,6 +339,7 @@ GameView.prototype.start = function start() {
 GameView.prototype.restartGame = function restartGame() {
     this.audioObj.currentTime = 0;
     this.playAudio()
+    this.game.remakeBeats();
     this.lastTime = 0;
     this.startTime = performance.now()
     this.beatIdx = 0;
@@ -338,6 +351,7 @@ GameView.prototype.restartGame = function restartGame() {
     this.pause = false;
     this.unpause = false;
     this.pausedTime = 0;
+    this.restartCount += 1
     requestAnimationFrame(this.animate.bind(this));
 }
 

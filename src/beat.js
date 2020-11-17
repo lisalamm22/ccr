@@ -100,15 +100,16 @@ Beat.prototype.getEndPos = function getEndPos(){
     this.endPos = [x + deltaX, y + deltaY]
 }
 
-Beat.prototype.moveDragBeat = function moveDragBeat(time){
+Beat.prototype.moveDragBeat = function moveDragBeat(time, restartCount){
     const timeDelta = time - this.time;
+    const speedMul = 2/(restartCount+1)
 
     if (timeDelta >= 0){
         let deltaX = Math.cos((this.dir * 2 * Math.PI) / 360);
         let deltaY = Math.sin((this.dir * 2 * Math.PI) / 360);
 
-        this.pos[0] = this.pos[0] + deltaX;
-        this.pos[1] = this.pos[1] - deltaY;
+        this.pos[0] = this.pos[0] + (deltaX * speedMul);
+        this.pos[1] = this.pos[1] - (deltaY * speedMul);
     }
 }
 
