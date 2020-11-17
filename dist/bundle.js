@@ -8137,11 +8137,9 @@ module.exports = Game;
   \**************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
-/*! CommonJS bailout: module.exports is used directly at 402:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-var Util = __webpack_require__(/*! ./util */ "./src/util.js"); // const anime = require("animejs");
-
+var Util = __webpack_require__(/*! ./util */ "./src/util.js");
 
 function GameView(game, ctx, options) {
   this.ctx = ctx;
@@ -8173,9 +8171,11 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
     _this.y = e.clientY - (window.innerHeight - canvasElement.height) / 2;
   });
   window.addEventListener("keydown", function (e) {
-    if (e.code === "Space") {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+
+    if (e.code === "KeyZ") {
       e.preventDefault();
-      e.stopPropagation();
       e.stopImmediatePropagation();
       console.log("X: ".concat((_this.x / window.innerWidth).toFixed(2), " Y: ").concat((_this.y / window.innerHeight).toFixed(2), " Time: ").concat(Math.floor(_this.lastTime)));
       _this.click[0] = _this.x;
@@ -8188,9 +8188,8 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
     }
   });
   window.addEventListener("keyup", function (e) {
-    if (e.code === "Space") {
+    if (e.code === "KeyZ") {
       e.preventDefault();
-      e.stopPropagation();
       e.stopImmediatePropagation();
       _this.mousedown = false;
     }
@@ -8230,13 +8229,11 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
   window.addEventListener("keyup", function (e) {
     if (e.code === "Escape" && !_this.pause) {
       e.preventDefault();
-      e.stopPropagation();
       e.stopImmediatePropagation();
 
       _this.pauseGame();
     } else {
       e.preventDefault();
-      e.stopPropagation();
       e.stopImmediatePropagation();
 
       _this.unpauseGame();
@@ -8329,16 +8326,20 @@ GameView.prototype.checkClick = function checkClick(activeBeat, idx) {
     var hitBeatStr = JSON.stringify(hitBeat);
     this.hitBeats[hitBeatStr] = this.lastTime;
     this.scoreHit(hitBeat);
-  }
 
-  if (idx === 0) {
-    this.combo += 1;
-  } else {
-    if (this.combo > this.maxCombo) {
-      this.maxCombo = this.combo;
+    if (idx === 0) {
+      this.combo += 1;
+
+      if (this.combo > this.maxCombo) {
+        this.maxCombo = this.combo;
+      }
+    } else {
+      if (this.combo > this.maxCombo) {
+        this.maxCombo = this.combo;
+      }
+
+      this.combo = 0;
     }
-
-    this.combo = 0;
   }
 };
 
@@ -8908,19 +8909,14 @@ document.addEventListener("DOMContentLoaded", function () {
   var finalScore = document.querySelector(".final-score");
   var scoreDoneButton = document.getElementById("score-done-btn");
   scoreDoneButton.addEventListener("click", function () {
-    volumeLvl = audioObj.volume * 100; // audioObj.pause();
-
+    volumeLvl = audioObj.volume * 100;
     finalScore.classList.add("hidden");
-    startMenu.classList.remove("hidden");
-    songsMenu.classList.add("hidden");
+    startMenu.classList.add("hidden");
+    songsMenu.classList.remove("hidden");
     gameContainer.classList.add("hidden");
-    anime({
-      targets: ".start-option",
-      width: "100%",
-      easing: "easeInOutQuad",
-      direction: "normal",
-      delay: anime.stagger(500)
-    });
+    audioSnip.currentTime = 0;
+    audioSnip.play();
+    replayAudioSnip();
   });
 });
 })();

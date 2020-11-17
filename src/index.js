@@ -315,21 +315,17 @@ document.addEventListener("DOMContentLoaded", function () {
       delay: anime.stagger(500),
     });
   });
+
   const finalScore = document.querySelector(".final-score");
   const scoreDoneButton = document.getElementById("score-done-btn")
   scoreDoneButton.addEventListener("click", () => {
     volumeLvl = audioObj.volume * 100;
-    // audioObj.pause();
     finalScore.classList.add("hidden")
-    startMenu.classList.remove("hidden");
-    songsMenu.classList.add("hidden");
+    startMenu.classList.add("hidden");
+    songsMenu.classList.remove("hidden");
     gameContainer.classList.add("hidden");
-    anime({
-      targets: ".start-option",
-      width: "100%",
-      easing: "easeInOutQuad",
-      direction: "normal",
-      delay: anime.stagger(500),
-    });
+    audioSnip.currentTime = 0;
+    audioSnip.play();
+    replayAudioSnip();
   })
 });

@@ -1,5 +1,4 @@
 const Util = require("./util");
-// const anime = require("animejs");
 
 function GameView(game, ctx, options) {
   this.ctx = ctx;
@@ -28,9 +27,10 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
         this.y = e.clientY - (window.innerHeight - canvasElement.height) / 2;
     });
     window.addEventListener("keydown", (e)=>{
-        if(e.code === "Space"){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if(e.code === "KeyZ"){
             e.preventDefault();
-            e.stopPropagation();
             e.stopImmediatePropagation();
             console.log(`X: ${(this.x/window.innerWidth).toFixed(2)} Y: ${(this.y/window.innerHeight).toFixed(2)} Time: ${Math.floor(this.lastTime)}`)
             this.click[0]=this.x
@@ -42,9 +42,8 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
         }
     })
     window.addEventListener("keyup", (e) => {
-        if(e.code === "Space"){
+        if(e.code === "KeyZ"){
             e.preventDefault();
-            e.stopPropagation();
             e.stopImmediatePropagation();
             this.mousedown = false;
         }
@@ -84,13 +83,11 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
     window.addEventListener("keyup", (e) => {
         if(e.code === "Escape" && !this.pause){
             e.preventDefault();
-            e.stopPropagation();
             e.stopImmediatePropagation();
             this.pauseGame();
         }
         else{
             e.preventDefault();
-            e.stopPropagation();
             e.stopImmediatePropagation();
             this.unpauseGame();
         }
@@ -189,13 +186,14 @@ GameView.prototype.checkClick = function checkClick(activeBeat, idx){
         let hitBeatStr = JSON.stringify(hitBeat);
         this.hitBeats[hitBeatStr] = this.lastTime;
         this.scoreHit(hitBeat);
-    }
-    if (idx === 0){
-        this.combo += 1;
-    }
-    else{
-        if(this.combo > this.maxCombo){ this.maxCombo = this.combo}
-        this.combo = 0;
+        if (idx === 0){
+            this.combo += 1;
+            if(this.combo > this.maxCombo){ this.maxCombo = this.combo}
+        }
+        else{
+            if(this.combo > this.maxCombo){ this.maxCombo = this.combo}
+            this.combo = 0;
+        }
     }
 }
 
