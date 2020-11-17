@@ -28,10 +28,10 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
         this.y = e.clientY - (window.innerHeight - canvasElement.height) / 2;
     });
     window.addEventListener("keydown", (e)=>{
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
         if(e.code === "Space"){
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
             console.log(`X: ${(this.x/window.innerWidth).toFixed(2)} Y: ${(this.y/window.innerHeight).toFixed(2)} Time: ${Math.floor(this.lastTime)}`)
             this.click[0]=this.x
             this.click[1]=this.y
@@ -42,17 +42,11 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
         }
     })
     window.addEventListener("keyup", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
         if(e.code === "Space"){
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
             this.mousedown = false;
-        }
-        if(e.code === "Escape" && !this.pause){
-            this.pauseGame();
-        }
-        else{
-            this.unpauseGame();
         }
     });
     window.addEventListener("mousedown", (e)=>{
@@ -86,6 +80,20 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
     unpauseButton.addEventListener("click", ()=> {
         this.lastTime -= (1000/60);
         this.unpauseGame();
+    })
+    window.addEventListener("keyup", (e) => {
+        if(e.code === "Escape" && !this.pause){
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            this.pauseGame();
+        }
+        else{
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            this.unpauseGame();
+        }
     })
 
     const volumeButtonGame = document.getElementById("volume-btn-GV");
@@ -340,6 +348,7 @@ GameView.prototype.restartGame = function restartGame() {
     this.audioObj.currentTime = 0;
     this.playAudio()
     this.game.remakeBeats();
+    console.log(this.game)
     this.lastTime = 0;
     this.startTime = performance.now()
     this.beatIdx = 0;

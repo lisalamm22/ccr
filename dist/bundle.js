@@ -8137,7 +8137,7 @@ module.exports = Game;
   \**************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
-/*! CommonJS bailout: module.exports is used directly at 394:0-14 */
+/*! CommonJS bailout: module.exports is used directly at 402:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Util = __webpack_require__(/*! ./util */ "./src/util.js"); // const anime = require("animejs");
@@ -8173,11 +8173,10 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
     _this.y = e.clientY - (window.innerHeight - canvasElement.height) / 2;
   });
   window.addEventListener("keydown", function (e) {
-    e.preventDefault();
-    e.stopPropagation();
-    e.stopImmediatePropagation();
-
     if (e.code === "Space") {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
       console.log("X: ".concat((_this.x / window.innerWidth).toFixed(2), " Y: ").concat((_this.y / window.innerHeight).toFixed(2), " Time: ").concat(Math.floor(_this.lastTime)));
       _this.click[0] = _this.x;
       _this.click[1] = _this.y;
@@ -8189,18 +8188,11 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
     }
   });
   window.addEventListener("keyup", function (e) {
-    e.preventDefault();
-    e.stopPropagation();
-    e.stopImmediatePropagation();
-
     if (e.code === "Space") {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
       _this.mousedown = false;
-    }
-
-    if (e.code === "Escape" && !_this.pause) {
-      _this.pauseGame();
-    } else {
-      _this.unpauseGame();
     }
   });
   window.addEventListener("mousedown", function (e) {
@@ -8234,6 +8226,21 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
     _this.lastTime -= 1000 / 60;
 
     _this.unpauseGame();
+  });
+  window.addEventListener("keyup", function (e) {
+    if (e.code === "Escape" && !_this.pause) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+
+      _this.pauseGame();
+    } else {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+
+      _this.unpauseGame();
+    }
   });
   var volumeButtonGame = document.getElementById("volume-btn-GV");
   var volumeInputGame = document.getElementById("volume-GV");
@@ -8479,6 +8486,7 @@ GameView.prototype.restartGame = function restartGame() {
   this.audioObj.currentTime = 0;
   this.playAudio();
   this.game.remakeBeats();
+  console.log(this.game);
   this.lastTime = 0;
   this.startTime = performance.now();
   this.beatIdx = 0;
