@@ -7964,6 +7964,7 @@ function Beat(options) {
   this.opacity = 0;
   this.held = true;
   this.hitTime = undefined;
+  this.hitScore = undefined;
 }
 
 Beat.prototype.drawClick = function draw(ctx, opacity) {
@@ -8053,6 +8054,46 @@ Beat.prototype.moveDragBeat = function moveDragBeat(time, restartCount) {
   }
 };
 
+Beat.prototype.drawHitA = function drawHitA(ctx) {
+  ctx.font = "20px Arial";
+  ctx.strokeStyle = "white";
+  ctx.strokeText("Perfect!", this.pos[0] + 30, this.pos[1] - 30);
+  ctx.fillStyle = "GoldenRod";
+  ctx.fillText("Perfect!", this.pos[0] + 30, this.pos[1] - 30);
+};
+
+Beat.prototype.drawHitB = function drawHitA(ctx) {
+  ctx.font = "20px Arial";
+  ctx.strokeStyle = "white";
+  ctx.strokeText("Great", this.pos[0] + 30, this.pos[1] - 30);
+  ctx.fillStyle = "blue";
+  ctx.fillText("Great", this.pos[0] + 30, this.pos[1] - 30);
+};
+
+Beat.prototype.drawHitC = function drawHitA(ctx) {
+  ctx.font = "20px Arial";
+  ctx.strokeStyle = "white";
+  ctx.strokeText("Good", this.pos[0] + 30, this.pos[1] - 30);
+  ctx.fillStyle = "green";
+  ctx.fillText("Good", this.pos[0] + 30, this.pos[1] - 30);
+};
+
+Beat.prototype.drawHitD = function drawHitA(ctx) {
+  ctx.font = "20px Arial";
+  ctx.strokeStyle = "white";
+  ctx.strokeText("OK", this.pos[0] + 30, this.pos[1] - 30);
+  ctx.fillStyle = "yellow";
+  ctx.fillText("OK", this.pos[0] + 30, this.pos[1] - 30);
+};
+
+Beat.prototype.drawHitF = function drawHitA(ctx) {
+  ctx.font = "20px Arial";
+  ctx.strokeStyle = "white";
+  ctx.strokeText("Miss", this.pos[0] + 30, this.pos[1] - 30);
+  ctx.fillStyle = "red";
+  ctx.fillText("Miss", this.pos[0] + 30, this.pos[1] - 30);
+};
+
 module.exports = Beat;
 
 /***/ }),
@@ -8127,6 +8168,7 @@ Game.prototype.remakeBeats = function remakeBeats() {
     beat.pos = beat.startPos.slice(0);
     beat.held = true;
     beat.hitTime = undefined;
+    beat.hitScore = undefined;
   });
 };
 
@@ -8140,7 +8182,7 @@ module.exports = Game;
   \**************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
-/*! CommonJS bailout: module.exports is used directly at 455:0-14 */
+/*! CommonJS bailout: module.exports is used directly at 484:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Util = __webpack_require__(/*! ./util */ "./src/util.js");
@@ -8165,7 +8207,7 @@ function GameView(game, ctx, options) {
   this.audioObj.volume = this.mute ? 0 : this.volume;
   this.restartCount = 0;
   this.clickAudio = new Audio("./src/assets/sounds/soft-hitclap.wav");
-  this.clickAudio.volume = this.audioObj.volume;
+  this.clickAudio.volume = this.audioObj.volume / 3;
 }
 
 GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
@@ -8194,6 +8236,9 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
     }
   });
   window.addEventListener("keyup", function (e) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+
     if (e.code === "KeyZ") {
       e.preventDefault();
       e.stopImmediatePropagation();
@@ -8336,20 +8381,23 @@ GameView.prototype.checkClick = function checkClick(activeBeat, idx) {
     this.hitBeats.push(hitBeat);
     this.scoreHit(hitBeat);
     this.clickAudio.play();
+    this.updateCombo(idx);
+  }
+};
 
-    if (idx === 0) {
-      this.combo += 1;
+GameView.prototype.updateCombo = function updateCombo(idx) {
+  if (idx === 0) {
+    this.combo += 1;
 
-      if (this.combo > this.maxCombo) {
-        this.maxCombo = this.combo;
-      }
-    } else {
-      if (this.combo > this.maxCombo) {
-        this.maxCombo = this.combo;
-      }
-
-      this.combo = 0;
+    if (this.combo > this.maxCombo) {
+      this.maxCombo = this.combo;
     }
+  } else {
+    if (this.combo > this.maxCombo) {
+      this.maxCombo = this.combo;
+    }
+
+    this.combo = 0;
   }
 };
 
@@ -8390,6 +8438,7 @@ GameView.prototype.drawHitBeat = function drawHitBeat(ctx, beat, hitTime, time) 
     var opacity = 1 - timeDelta / timeToFade;
     beat.drawClick(ctx, opacity, beatRadMul);
     beat.drawRing(ctx, opacity, ringRadMul, null, true);
+    this.drawHit(beat, beat.hitScore);
   }
 };
 
@@ -8401,6 +8450,7 @@ GameView.prototype.drawHitDrag = function drawHitDrag(ctx, beat, startTime, time
     var ringRadMul = timeDelta / timeToFade + 1;
     var opacity = 1 - timeDelta / timeToFade;
     beat.drawRing(ctx, opacity, ringRadMul, null, true);
+    this.drawHit(beat, beat.hitScore);
   }
 };
 
@@ -8509,12 +8559,33 @@ GameView.prototype.drawDrag = function drawDrag(beat, time) {
 GameView.prototype.scoreHit = function scoreHit(beat) {
   var fullScore = 100;
   var activeBeatT = 500;
-  this.score += Math.abs(fullScore * (activeBeatT - Math.abs(beat.hitTime - beat.time)) / activeBeatT);
+  hitScore = Math.abs(fullScore * (activeBeatT - Math.abs(beat.hitTime - beat.time)) / activeBeatT);
+  this.score += hitScore;
+  beat.hitScore = hitScore;
 };
 
 GameView.prototype.scoreDrag = function scoreDrag(hit) {
   if (hit) {
     this.score += 100;
+  }
+};
+
+GameView.prototype.drawHit = function drawHit(beat, hitScore) {
+  if (hitScore > 80) {
+    console.log("Perfect");
+    beat.drawHitA(this.ctx);
+  } else if (hitScore > 60) {
+    console.log("Great");
+    beat.drawHitB(this.ctx);
+  } else if (hitScore > 40) {
+    console.log("Good");
+    beat.drawHitC(this.ctx);
+  } else if (hitScore > 20) {
+    console.log("OK");
+    beat.drawHitD(this.ctx);
+  } else {
+    console.log("Miss");
+    beat.drawHitF(this.ctx);
   }
 };
 

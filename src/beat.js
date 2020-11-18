@@ -22,6 +22,7 @@ function Beat(options){
     this.opacity = 0;
     this.held = true;
     this.hitTime = undefined;
+    this.hitScore = undefined;
 }
 
 Beat.prototype.drawClick = function draw(ctx, opacity, radiusMul=1, seq) {
@@ -112,6 +113,46 @@ Beat.prototype.moveDragBeat = function moveDragBeat(time, restartCount){
         this.pos[0] = this.pos[0] + (deltaX * speedMul);
         this.pos[1] = this.pos[1] - (deltaY * speedMul);
     }
+}
+
+Beat.prototype.drawHitA = function drawHitA(ctx){
+    ctx.font="20px Arial"
+    ctx.strokeStyle = "white"
+    ctx.strokeText("Perfect!", this.pos[0]+30, this.pos[1]-30)
+    ctx.fillStyle = "GoldenRod";
+    ctx.fillText("Perfect!", this.pos[0]+30, this.pos[1]-30)
+}
+
+Beat.prototype.drawHitB = function drawHitA(ctx){
+    ctx.font="20px Arial"
+    ctx.strokeStyle = "white"
+    ctx.strokeText("Great", this.pos[0]+30, this.pos[1]-30)
+    ctx.fillStyle = "blue";
+    ctx.fillText("Great", this.pos[0]+30, this.pos[1]-30)
+}
+
+Beat.prototype.drawHitC = function drawHitA(ctx){
+    ctx.font="20px Arial"
+    ctx.strokeStyle = "white"
+    ctx.strokeText("Good", this.pos[0]+30, this.pos[1]-30)
+    ctx.fillStyle = "green";
+    ctx.fillText("Good", this.pos[0]+30, this.pos[1]-30)
+}
+
+Beat.prototype.drawHitD = function drawHitA(ctx){
+    ctx.font="20px Arial"
+    ctx.strokeStyle = "white"
+    ctx.strokeText("OK", this.pos[0]+30, this.pos[1]-30)
+    ctx.fillStyle = "yellow";
+    ctx.fillText("OK", this.pos[0]+30, this.pos[1]-30)
+}
+
+Beat.prototype.drawHitF = function drawHitA(ctx){
+    ctx.font="20px Arial"
+    ctx.strokeStyle = "white"
+    ctx.strokeText("Miss", this.pos[0]+30, this.pos[1]-30)
+    ctx.fillStyle = "red";
+    ctx.fillText("Miss", this.pos[0]+30, this.pos[1]-30)
 }
 
 module.exports = Beat;

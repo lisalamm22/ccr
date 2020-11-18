@@ -20,7 +20,7 @@ function GameView(game, ctx, options) {
   this.audioObj.volume = this.mute ? 0 : this.volume;
   this.restartCount = 0
   this.clickAudio = new Audio("./src/assets/sounds/soft-hitclap.wav")
-  this.clickAudio.volume = this.audioObj.volume
+  this.clickAudio.volume = this.audioObj.volume/3
 }
 GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
     document.getElementById("game-canvas").addEventListener("mousemove", (e) => {
@@ -44,6 +44,8 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
         }
     })
     window.addEventListener("keyup", (e) => {
+        e.preventDefault();
+        e.stopImmediatePropagation();
         if(e.code === "KeyZ"){
             e.preventDefault();
             e.stopImmediatePropagation();
@@ -192,14 +194,18 @@ GameView.prototype.checkClick = function checkClick(activeBeat, idx){
         this.hitBeats.push(hitBeat)
         this.scoreHit(hitBeat);
         this.clickAudio.play();
-        if (idx === 0){
-            this.combo += 1;
-            if(this.combo > this.maxCombo){ this.maxCombo = this.combo}
-        }
-        else{
-            if(this.combo > this.maxCombo){ this.maxCombo = this.combo}
-            this.combo = 0;
-        }
+        this.updateCombo(idx);
+    }
+}
+
+GameView.prototype.updateCombo = function updateCombo(idx){
+    if (idx === 0){
+        this.combo += 1;
+        if(this.combo > this.maxCombo){ this.maxCombo = this.combo}
+    }
+    else{
+        if(this.combo > this.maxCombo){ this.maxCombo = this.combo}
+        this.combo = 0;
     }
 }
 
@@ -242,16 +248,18 @@ GameView.prototype.drawHitBeat = function drawHitBeat(ctx, beat, hitTime, time){
         let opacity = 1 - (timeDelta / timeToFade);
         beat.drawClick(ctx, opacity, beatRadMul);
         beat.drawRing(ctx, opacity, ringRadMul, null, true);
+        this.drawHit(beat, beat.hitScore)
     }
 }
 GameView.prototype.drawHitDrag = function drawHitDrag(ctx, beat, startTime, time){
     const timeDelta =  time - startTime; 
     const timeToFade = 1000
-
+    
     if(timeDelta < timeToFade){
         let ringRadMul = (timeDelta / timeToFade) + 1;
         let opacity = 1 - (timeDelta / timeToFade);
         beat.drawRing(ctx, opacity, ringRadMul, null, true);
+        this.drawHit(beat, beat.hitScore)
     }
 }
 
@@ -362,12 +370,38 @@ GameView.prototype.drawDrag = function drawDrag(beat, time){
 GameView.prototype.scoreHit = function scoreHit(beat){
     const fullScore = 100;
     const activeBeatT = 500;
-    this.score += Math.abs(fullScore * (activeBeatT-Math.abs(beat.hitTime-beat.time))/activeBeatT)
+    hitScore = Math.abs(fullScore * (activeBeatT-Math.abs(beat.hitTime-beat.time))/activeBeatT)
+    this.score += hitScore
+    beat.hitScore = hitScore
+
 }
 
 GameView.prototype.scoreDrag = function scoreDrag(hit){
     if(hit){
         this.score += 100;
+    }
+}
+
+GameView.prototype.drawHit = function drawHit(beat, hitScore){
+    if(hitScore > 80){
+        console.log("Perfect")
+        beat.drawHitA(this.ctx)
+    }
+    else if(hitScore > 60){
+        console.log("Great")
+        beat.drawHitB(this.ctx)
+    }
+    else if(hitScore > 40){
+        console.log("Good")
+        beat.drawHitC(this.ctx)
+    }
+    else if(hitScore > 20){
+        console.log("OK")
+        beat.drawHitD(this.ctx)
+    }
+    else{
+        console.log("Miss")
+        beat.drawHitF(this.ctx)
     }
 }
 

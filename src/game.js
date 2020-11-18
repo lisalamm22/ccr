@@ -60,6 +60,7 @@ Game.prototype.remakeBeats = function remakeBeats() {
     beat.pos = beat.startPos.slice(0)
     beat.held = true
     beat.hitTime = undefined
+    beat.hitScore = undefined
   })
 };
 
