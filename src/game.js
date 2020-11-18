@@ -58,6 +58,8 @@ Game.prototype.makeBeats = function makeBeats() {
 Game.prototype.remakeBeats = function remakeBeats() {
   this.beats.forEach((beat) => {
     beat.pos = beat.startPos.slice(0)
+    beat.held = true
+    beat.hitTime = undefined
   })
 };
 

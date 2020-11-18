@@ -21,6 +21,7 @@ function Beat(options){
     this.radius = options.radius || DEFAULTS.RADIUS;
     this.opacity = 0;
     this.held = true;
+    this.hitTime = undefined;
 }
 
 Beat.prototype.drawClick = function draw(ctx, opacity, radiusMul=1, seq) {
