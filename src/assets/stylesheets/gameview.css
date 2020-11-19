@@ -29,11 +29,11 @@ body{
   right: 25%;
 }
 
-.final-score{
+.final-score-board{
   position: absolute;
   width: 50vw;
   height: 75vh;
-  font-size: 30px;
+  font-size: 25px;
   font-weight: bold;
   text-transform: uppercase;
   color: white;
@@ -42,6 +42,43 @@ body{
   top: 10%;
   left: 25%;
   opacity: .9;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.final-score-board p{
+  margin: 15px 0 0 0 ;
+}
+
+.final-score{
+  display: flex;
+  padding-bottom: 15px;
+}
+
+.score-board-line{
+  width: 80%;
+  border: white 1px solid;
+  margin-left: 10%;
+}
+
+.final-score-det{
+  display: flex;
+  flex-direction: column;
+}
+
+#final-score-rank{
+    font-size: 100px;
+    width: 50%;
+    text-align: center;
+}
+
+.hit-beats-grades{
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding-top: 20px;
 }
 
 #replay-btn{

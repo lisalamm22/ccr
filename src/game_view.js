@@ -34,7 +34,7 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
         if(e.code === "KeyZ"){
             e.preventDefault();
             e.stopImmediatePropagation();
-            console.log(`X: ${(this.x/window.innerWidth).toFixed(2)} Y: ${(this.y/window.innerHeight).toFixed(2)} Time: ${Math.floor(this.lastTime)}`)
+            // console.log(`X: ${(this.x/window.innerWidth).toFixed(2)} Y: ${(this.y/window.innerHeight).toFixed(2)} Time: ${Math.floor(this.lastTime)}`)
             this.click[0]=this.x
             this.click[1]=this.y
             this.mousedown = true;
@@ -53,7 +53,7 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
         }
     });
     window.addEventListener("mousedown", (e)=>{
-        console.log(`X: ${(e.clientX/window.innerWidth).toFixed(2)} Y: ${(e.clientY/window.innerHeight).toFixed(2)} Time: ${Math.floor(this.lastTime)}`)
+        // console.log(`X: ${(e.clientX/window.innerWidth).toFixed(2)} Y: ${(e.clientY/window.innerHeight).toFixed(2)} Time: ${Math.floor(this.lastTime)}`)
         const canvasElement = document.getElementById("game-canvas");
         this.click[0] = e.clientX - (window.innerWidth - canvasElement.width)/2;
         this.click[1] = e.clientY - (window.innerHeight - canvasElement.height) / 2;
@@ -141,11 +141,10 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
         volumeInputSongs.value = e.target.value;
     })
 
-    const finalScore = document.querySelector(".final-score")
+    const finalScore = document.querySelector(".final-score-board")
     this.audioObj.addEventListener("ended", () => {
+        this.scoreGame()
         finalScore.classList.remove("hidden")
-        document.getElementById("final-score").innerHTML = `Score ${Math.floor(this.score)}`;
-        document.getElementById("max-combo").innerHTML = `Max Combo ${this.maxCombo}`;
     })
 
     const replayButton = document.getElementById("replay-btn")
@@ -384,23 +383,18 @@ GameView.prototype.scoreDrag = function scoreDrag(hit){
 
 GameView.prototype.drawHit = function drawHit(beat, hitScore){
     if(hitScore > 80){
-        console.log("Perfect")
         beat.drawHitA(this.ctx)
     }
     else if(hitScore > 60){
-        console.log("Great")
         beat.drawHitB(this.ctx)
     }
     else if(hitScore > 40){
-        console.log("Good")
         beat.drawHitC(this.ctx)
     }
     else if(hitScore > 20){
-        console.log("OK")
         beat.drawHitD(this.ctx)
     }
     else{
-        console.log("Miss")
         beat.drawHitF(this.ctx)
     }
 }
@@ -427,7 +421,6 @@ GameView.prototype.restartGame = function restartGame() {
     this.audioObj.currentTime = 0;
     this.playAudio()
     this.game.remakeBeats();
-    console.log(this.game)
     this.lastTime = 0;
     this.startTime = performance.now()
     this.beatIdx = 0;
@@ -477,5 +470,73 @@ GameView.prototype.animate = function animate(time) {
         requestAnimationFrame(this.animate.bind(this));
     }
 };
+
+GameView.prototype.scoreGame = function scoreGame(){
+    let maxScore = 0;
+    let scoreRank;
+    const numBeats = this.game.beats.length;
+    let beatsA = 0;
+    let beatsB = 0;
+    let beatsC = 0;
+    let beatsD = 0;
+    let beatsF = 0;
+    this.game.beats.forEach(beat => {
+        maxScore += 100
+        if (beat.type === "DRAG"){
+            maxScore += 100
+        }
+        if(beat.hitScore > 80){
+            beatsA += 1;
+        }
+        else if(beat.hitScore > 60){
+            beatsB += 1;
+        }
+        else if(beat.hitScore > 40){
+            beatsC += 1;
+        }
+        else if(beat.hitScore > 20){
+            beatsD += 1;
+        }
+        else{
+            beatsF += 1;
+        }
+    })
+
+    const scorePct = Math.floor(100* this.score/maxScore )
+    if (scorePct > 85){
+        scoreRank = "S"
+    }
+    else if (scorePct > 80){
+        scoreRank = "A"
+    }
+    else if (scorePct > 75){
+        scoreRank = "B"
+    }
+    else if (scorePct > 70){
+        scoreRank = "C"
+    }
+    else if (scorePct > 65){
+        scoreRank = "D"
+    }
+    else{
+        scoreRank = "F"
+    }
+    document.getElementById("final-score-rank").innerHTML = scoreRank
+    document.getElementById("final-score-pct").innerHTML = `Percent ${scorePct}%`
+    document.getElementById("final-score").innerHTML = `Score ${Math.floor(this.score)}`;
+    document.getElementById("max-combo").innerHTML = `Max Combo ${this.maxCombo}`;
+
+    const beatsAPct = Math.floor(beatsA / numBeats * 100);
+    const beatsBPct = Math.floor(beatsB / numBeats * 100);
+    const beatsCPct = Math.floor(beatsC / numBeats * 100);
+    const beatsDPct = Math.floor(beatsD / numBeats * 100);
+    const beatsFPct = 100 - beatsAPct - beatsBPct - beatsCPct - beatsDPct
+
+    document.getElementById("beats-A-pct").innerHTML = `${beatsAPct}% Perfect!`
+    document.getElementById("beats-B-pct").innerHTML = `${beatsBPct}% Great`
+    document.getElementById("beats-C-pct").innerHTML = `${beatsCPct}% Good`
+    document.getElementById("beats-D-pct").innerHTML = `${beatsDPct}% OK`
+    document.getElementById("beats-F-pct").innerHTML = `${beatsFPct}% Miss`
+}
 
 module.exports = GameView;

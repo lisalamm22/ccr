@@ -316,7 +316,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  const finalScore = document.querySelector(".final-score");
+  const finalScore = document.querySelector(".final-score-board");
   const scoreDoneButton = document.getElementById("score-done-btn")
   scoreDoneButton.addEventListener("click", () => {
     volumeLvl = audioObj.volume * 100;

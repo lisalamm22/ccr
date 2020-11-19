@@ -8182,7 +8182,7 @@ module.exports = Game;
   \**************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
-/*! CommonJS bailout: module.exports is used directly at 484:0-14 */
+/*! CommonJS bailout: module.exports is used directly at 538:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Util = __webpack_require__(/*! ./util */ "./src/util.js");
@@ -8224,8 +8224,8 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
 
     if (e.code === "KeyZ") {
       e.preventDefault();
-      e.stopImmediatePropagation();
-      console.log("X: ".concat((_this.x / window.innerWidth).toFixed(2), " Y: ").concat((_this.y / window.innerHeight).toFixed(2), " Time: ").concat(Math.floor(_this.lastTime)));
+      e.stopImmediatePropagation(); // console.log(`X: ${(this.x/window.innerWidth).toFixed(2)} Y: ${(this.y/window.innerHeight).toFixed(2)} Time: ${Math.floor(this.lastTime)}`)
+
       _this.click[0] = _this.x;
       _this.click[1] = _this.y;
       _this.mousedown = true;
@@ -8246,7 +8246,7 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
     }
   });
   window.addEventListener("mousedown", function (e) {
-    console.log("X: ".concat((e.clientX / window.innerWidth).toFixed(2), " Y: ").concat((e.clientY / window.innerHeight).toFixed(2), " Time: ").concat(Math.floor(_this.lastTime)));
+    // console.log(`X: ${(e.clientX/window.innerWidth).toFixed(2)} Y: ${(e.clientY/window.innerHeight).toFixed(2)} Time: ${Math.floor(this.lastTime)}`)
     var canvasElement = document.getElementById("game-canvas");
     _this.click[0] = e.clientX - (window.innerWidth - canvasElement.width) / 2;
     _this.click[1] = e.clientY - (window.innerHeight - canvasElement.height) / 2;
@@ -8328,11 +8328,11 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
     volumeInputStart.value = e.target.value;
     volumeInputSongs.value = e.target.value;
   });
-  var finalScore = document.querySelector(".final-score");
+  var finalScore = document.querySelector(".final-score-board");
   this.audioObj.addEventListener("ended", function () {
+    _this.scoreGame();
+
     finalScore.classList.remove("hidden");
-    document.getElementById("final-score").innerHTML = "Score ".concat(Math.floor(_this.score));
-    document.getElementById("max-combo").innerHTML = "Max Combo ".concat(_this.maxCombo);
   });
   var replayButton = document.getElementById("replay-btn");
   replayButton.addEventListener("click", function () {
@@ -8572,19 +8572,14 @@ GameView.prototype.scoreDrag = function scoreDrag(hit) {
 
 GameView.prototype.drawHit = function drawHit(beat, hitScore) {
   if (hitScore > 80) {
-    console.log("Perfect");
     beat.drawHitA(this.ctx);
   } else if (hitScore > 60) {
-    console.log("Great");
     beat.drawHitB(this.ctx);
   } else if (hitScore > 40) {
-    console.log("Good");
     beat.drawHitC(this.ctx);
   } else if (hitScore > 20) {
-    console.log("OK");
     beat.drawHitD(this.ctx);
   } else {
-    console.log("Miss");
     beat.drawHitF(this.ctx);
   }
 };
@@ -8613,7 +8608,6 @@ GameView.prototype.restartGame = function restartGame() {
   this.audioObj.currentTime = 0;
   this.playAudio();
   this.game.remakeBeats();
-  console.log(this.game);
   this.lastTime = 0;
   this.startTime = performance.now();
   this.beatIdx = 0;
@@ -8666,6 +8660,66 @@ GameView.prototype.animate = function animate(time) {
   } else {
     requestAnimationFrame(this.animate.bind(this));
   }
+};
+
+GameView.prototype.scoreGame = function scoreGame() {
+  var maxScore = 0;
+  var scoreRank;
+  var numBeats = this.game.beats.length;
+  var beatsA = 0;
+  var beatsB = 0;
+  var beatsC = 0;
+  var beatsD = 0;
+  var beatsF = 0;
+  this.game.beats.forEach(function (beat) {
+    maxScore += 100;
+
+    if (beat.type === "DRAG") {
+      maxScore += 100;
+    }
+
+    if (beat.hitScore > 80) {
+      beatsA += 1;
+    } else if (beat.hitScore > 60) {
+      beatsB += 1;
+    } else if (beat.hitScore > 40) {
+      beatsC += 1;
+    } else if (beat.hitScore > 20) {
+      beatsD += 1;
+    } else {
+      beatsF += 1;
+    }
+  });
+  var scorePct = Math.floor(100 * this.score / maxScore);
+
+  if (scorePct > 85) {
+    scoreRank = "S";
+  } else if (scorePct > 80) {
+    scoreRank = "A";
+  } else if (scorePct > 75) {
+    scoreRank = "B";
+  } else if (scorePct > 70) {
+    scoreRank = "C";
+  } else if (scorePct > 65) {
+    scoreRank = "D";
+  } else {
+    scoreRank = "F";
+  }
+
+  document.getElementById("final-score-rank").innerHTML = scoreRank;
+  document.getElementById("final-score-pct").innerHTML = "Percent ".concat(scorePct, "%");
+  document.getElementById("final-score").innerHTML = "Score ".concat(Math.floor(this.score));
+  document.getElementById("max-combo").innerHTML = "Max Combo ".concat(this.maxCombo);
+  var beatsAPct = Math.floor(beatsA / numBeats * 100);
+  var beatsBPct = Math.floor(beatsB / numBeats * 100);
+  var beatsCPct = Math.floor(beatsC / numBeats * 100);
+  var beatsDPct = Math.floor(beatsD / numBeats * 100);
+  var beatsFPct = 100 - beatsAPct - beatsBPct - beatsCPct - beatsDPct;
+  document.getElementById("beats-A-pct").innerHTML = "".concat(beatsAPct, "% Perfect!");
+  document.getElementById("beats-B-pct").innerHTML = "".concat(beatsBPct, "% Great");
+  document.getElementById("beats-C-pct").innerHTML = "".concat(beatsCPct, "% Good");
+  document.getElementById("beats-D-pct").innerHTML = "".concat(beatsDPct, "% OK");
+  document.getElementById("beats-F-pct").innerHTML = "".concat(beatsFPct, "% Miss");
 };
 
 module.exports = GameView;
@@ -9032,7 +9086,7 @@ document.addEventListener("DOMContentLoaded", function () {
       delay: anime.stagger(500)
     });
   });
-  var finalScore = document.querySelector(".final-score");
+  var finalScore = document.querySelector(".final-score-board");
   var scoreDoneButton = document.getElementById("score-done-btn");
   scoreDoneButton.addEventListener("click", function () {
     volumeLvl = audioObj.volume * 100;

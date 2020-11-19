@@ -144,10 +144,23 @@
         <canvas id="game-canvas"></canvas>
         <p id="score"></p>
         <p id="combo"></p>
-        <!-- <p id="hitScore"></p> -->
-        <div class = "final-score hidden">
-            <p id="final-score"></p>
-            <p id="max-combo"></p>
+        <div class = "final-score-board hidden">
+            <div class="final-score">
+                <p id="final-score-rank"></p>
+                <div class="final-score-det">
+                    <p id="final-score"></p>
+                    <p id="final-score-pct"></p>
+                    <p id="max-combo"></p>
+                </div>
+            </div>
+            <div class = "score-board-line"></div>
+            <div class ="hit-beats-grades">
+                <p id = "beats-A-pct"></p>
+                <p id = "beats-B-pct"></p>
+                <p id = "beats-C-pct"></p>
+                <p id = "beats-D-pct"></p>
+                <p id = "beats-F-pct"></p>
+            </div>
             <div id="replay-btn" class="button">
                 <p class="button-txt">Replay!</p>
             </div>
