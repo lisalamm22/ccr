@@ -189,15 +189,15 @@ input[type=range]:focus::-webkit-slider-runnable-track {
 
 
 #song1{
-  background-image: url("../images/1.jpg");
+  background-image: url("../images/3.jpg");
   background-size: cover;
 }
 #song2{
-  background-image: url("../images/2.jpg");
+  background-image: url("../images/9.jpg");
   background-size: cover;
 }
 #song3{
-  background-image: url("../images/3.jpg");
+  background-image: url("../images/1.jpg");
   background-size: cover;
 }
 #song4{
@@ -221,7 +221,7 @@ input[type=range]:focus::-webkit-slider-runnable-track {
   background-size: cover;
 }
 #song9{
-  background-image: url("../images/9.jpg");
+  background-image: url("../images/2.jpg");
   background-size: cover;
 }
 #song10{

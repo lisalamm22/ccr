@@ -8826,11 +8826,11 @@ var Game = __webpack_require__(/*! ./game */ "./src/game.js");
 
 var GameView = __webpack_require__(/*! ./game_view */ "./src/game_view.js");
 
-var Beatmap1 = __webpack_require__(/*! ./assets/beatmaps/beatmap1 */ "./src/assets/beatmaps/beatmap1.js");
+var Beatmap1 = __webpack_require__(/*! ./assets/beatmaps/beatmap3 */ "./src/assets/beatmaps/beatmap3.js");
 
-var Beatmap2 = __webpack_require__(/*! ./assets/beatmaps/beatmap2 */ "./src/assets/beatmaps/beatmap2.js");
+var Beatmap2 = __webpack_require__(/*! ./assets/beatmaps/beatmap9 */ "./src/assets/beatmaps/beatmap9.js");
 
-var Beatmap3 = __webpack_require__(/*! ./assets/beatmaps/beatmap3 */ "./src/assets/beatmaps/beatmap3.js");
+var Beatmap3 = __webpack_require__(/*! ./assets/beatmaps/beatmap1 */ "./src/assets/beatmaps/beatmap1.js");
 
 var Beatmap4 = __webpack_require__(/*! ./assets/beatmaps/beatmap4 */ "./src/assets/beatmaps/beatmap4.js");
 
@@ -8842,7 +8842,7 @@ var Beatmap7 = __webpack_require__(/*! ./assets/beatmaps/beatmap7 */ "./src/asse
 
 var Beatmap8 = __webpack_require__(/*! ./assets/beatmaps/beatmap8 */ "./src/assets/beatmaps/beatmap8.js");
 
-var Beatmap9 = __webpack_require__(/*! ./assets/beatmaps/beatmap9 */ "./src/assets/beatmaps/beatmap9.js");
+var Beatmap9 = __webpack_require__(/*! ./assets/beatmaps/beatmap2 */ "./src/assets/beatmaps/beatmap2.js");
 
 var Beatmap10 = __webpack_require__(/*! ./assets/beatmaps/beatmap10 */ "./src/assets/beatmaps/beatmap10.js");
 
@@ -8873,14 +8873,14 @@ document.addEventListener("DOMContentLoaded", function () {
     easing: "easeInOutQuad",
     direction: "normal",
     delay: anime.stagger(500)
-  }); // anime({
-  //   targets:".title",
-  //   scale: 1.02,
-  //   direction: "alternate",
-  //   easing: 'easeInOutSine',
-  //   loop: true,
-  // })
-  //volume
+  });
+  anime({
+    targets: ".title",
+    scale: 1.02,
+    direction: "alternate",
+    easing: 'easeInOutSine',
+    loop: true
+  }); //volume
 
   var volumeLvl = 50;
   var mute = false;
@@ -8951,21 +8951,22 @@ document.addEventListener("DOMContentLoaded", function () {
   instructionsDoneButton.addEventListener("click", function () {
     instructions.classList.add("hidden");
     instructionsDoneButton.classList.add("hidden");
-  }); // song selection
-  // anime({
-  //   targets: "#start-btn",
-  //   scale: 1.1,
-  //   direction: "alternate",
-  //   easing: 'easeInOutSine',
-  //   loop: true,
-  // })
+  });
+  anime({
+    targets: "#start-btn",
+    scale: 1.1,
+    direction: "alternate",
+    easing: 'easeInOutSine',
+    loop: true
+  }); //song selection
 
   var songs = document.querySelector(".song-options");
   var songCount = songs.childElementCount;
   var maxLeft = (songCount - 1) * 100 * -1;
   var current = 0;
   var songchoice = 1;
-  var audioURL = "./src/assets/sounds/1. Cut Your Teeth by Kyla La Grange (Kygo Remix).mp3";
+  var audioURL = "./src/assets/sounds/3. さよならトリップ by Dormir.mp3";
+  ;
   var beatmap = Beatmap1;
   var audioSnip = new Audio(audioURL);
   audioSnip.volume = volumeLvl / 100;
@@ -9014,17 +9015,17 @@ document.addEventListener("DOMContentLoaded", function () {
       canvasElement.className = "song-choice-1";
       beatmap = Beatmap1;
       songchoice = 1;
-      audioURL = "./src/assets/sounds/1. Cut Your Teeth by Kyla La Grange (Kygo Remix).mp3";
+      audioURL = "./src/assets/sounds/3. さよならトリップ by Dormir.mp3";
     } else if (current === -100) {
       canvasElement.className = "song-choice-2";
       beatmap = Beatmap2;
       songchoice = 2;
-      audioURL = "./src/assets/sounds/2. トルコ行進曲 by T.M. Orchestra.mp3";
+      audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
     } else if (current === -200) {
       canvasElement.className = "song-choice-3";
       beatmap = Beatmap3;
       songchoice = 3;
-      audioURL = "./src/assets/sounds/3. さよならトリップ by Dormir.mp3";
+      audioURL = "./src/assets/sounds/1. Cut Your Teeth by Kyla La Grange (Kygo Remix).mp3";
     } else if (current === -300) {
       canvasElement.className = "song-choice-4";
       beatmap = Beatmap4;
@@ -9054,7 +9055,7 @@ document.addEventListener("DOMContentLoaded", function () {
       canvasElement.className = "song-choice-9";
       beatmap = Beatmap9;
       songchoice = 9;
-      audioURL = "./src/assets/sounds/9. Sunflower by Swae Lee and Post Malone.mp3";
+      audioURL = "./src/assets/sounds/2. トルコ行進曲 by T.M. Orchestra.mp3";
     } else if (current === -900) {
       canvasElement.className = "song-choice-10";
       beatmap = Beatmap10;

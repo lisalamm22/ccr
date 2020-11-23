@@ -7,7 +7,7 @@ body{
   align-items: center;
   position: relative;
   margin: 0 auto;
-  /* overflow: hidden; */
+  overflow: hidden;
   /* cursor: url("../images/icons8-round (1).svg") 25 25, auto; */
 }
 
@@ -31,7 +31,7 @@ body{
 
 .health{
   position: absolute;
-  top: 7%;
+  top: 6%;
   left: -1%;
   width: 40%;
   height: 25px;
@@ -148,15 +148,15 @@ body{
 }
 
 .song-choice-1{
-  background-image: url("../images/1.jpg");
+  background-image: url("../images/3.jpg");
   background-size: cover;
 }
 .song-choice-2{
-  background-image: url("../images/2.jpg");
+  background-image: url("../images/9.jpg");
   background-size: cover;
 }
 .song-choice-3{
-  background-image: url("../images/3.jpg");
+  background-image: url("../images/1.jpg");
   background-size: cover;
 }
 .song-choice-4{
@@ -180,7 +180,7 @@ body{
   background-size: cover;
 }
 .song-choice-9{
-  background-image: url("../images/9.jpg");
+  background-image: url("../images/2.jpg");
   background-size: cover;
 }
 .song-choice-10{
