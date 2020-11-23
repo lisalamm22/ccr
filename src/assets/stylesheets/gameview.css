@@ -32,7 +32,7 @@ body{
 .final-score-board{
   position: absolute;
   width: 50vw;
-  height: 75vh;
+  height: 65vh;
   font-size: 25px;
   font-weight: bold;
   text-transform: uppercase;

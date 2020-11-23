@@ -7,9 +7,11 @@ function GameView(game, ctx, options) {
   this.mousedown = false;
   this.activeBeats = [];
   this.hitBeats = [];
+  this.missedBeats = [];
   this.score = 0;
   this.combo = 0;
   this.maxCombo = 0;
+  this.health = 50;
   this.volume = (options.volume/100);
   this.mute = options.mute;
   this.restart = false;
@@ -20,7 +22,7 @@ function GameView(game, ctx, options) {
   this.audioObj.volume = this.mute ? 0 : this.volume;
   this.restartCount = 0
   this.clickAudio = new Audio("./src/assets/sounds/soft-hitclap.wav")
-  this.clickAudio.volume = this.audioObj.volume/3
+  this.clickAudio.volume = this.audioObj.volume/4
 }
 GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
     document.getElementById("game-canvas").addEventListener("mousemove", (e) => {
@@ -51,6 +53,16 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
             e.stopImmediatePropagation();
             this.mousedown = false;
         }
+        else if(e.code === "Escape" && !this.pause){
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            this.pauseGame();
+        }
+        else if(e.code === "Escape" && this.pause){
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            this.unpauseGame();
+        }
     });
     window.addEventListener("mousedown", (e)=>{
         // console.log(`X: ${(e.clientX/window.innerWidth).toFixed(2)} Y: ${(e.clientY/window.innerHeight).toFixed(2)} Time: ${Math.floor(this.lastTime)}`)
@@ -76,25 +88,13 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
     })
     
     const pauseButton = document.getElementById("pause-btn");
-    const unpauseButton = document.getElementById("unpause-btn");
     pauseButton.addEventListener("click", ()=> {
         this.pauseGame();
     })
+    const unpauseButton = document.getElementById("unpause-btn");
     unpauseButton.addEventListener("click", ()=> {
         this.lastTime -= (1000/60);
         this.unpauseGame();
-    })
-    window.addEventListener("keyup", (e) => {
-        if(e.code === "Escape" && !this.pause){
-            e.preventDefault();
-            e.stopImmediatePropagation();
-            this.pauseGame();
-        }
-        else{
-            e.preventDefault();
-            e.stopImmediatePropagation();
-            this.unpauseGame();
-        }
     })
 
     const volumeButtonGame = document.getElementById("volume-btn-GV");
@@ -126,7 +126,7 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
         else {
             this.mute = false;
             this.audioObj.volume = this.volume;
-            this.clickAudio.volume = this.audioObj.volume/3;
+            this.clickAudio.volume = this.audioObj.volume/4;
             volumeInputStart.value = this.volume*100
             volumeInputSongs.value = this.volume * 100
             volumeInputGame.value = this.volume * 100
@@ -136,7 +136,7 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
     volumeInputGame.addEventListener("change", (e) => {
         this.volume = e.target.value / 100;
         this.audioObj.volume = this.volume;
-        this.clickAudio.volume = this.audioObj.volume/3;
+        this.clickAudio.volume = this.audioObj.volume/4;
         volumeInputStart.value = e.target.value;
         volumeInputSongs.value = e.target.value;
     })
@@ -180,7 +180,9 @@ GameView.prototype.isActiveBeat = function isActiveBeat(beat, idx, time){
         else if (time - beat.time > 800) {
             let idx = this.activeBeats.indexOf(beat);
             if (idx !== -1) {
-            this.activeBeats.splice(idx, 1);
+                missedBeat = this.activeBeats.splice(idx, 1);
+                this.missedBeats.push(missedBeat)
+                this.updateHealth(missedBeat)
             }
         }
     }
@@ -188,12 +190,13 @@ GameView.prototype.isActiveBeat = function isActiveBeat(beat, idx, time){
 
 GameView.prototype.checkClick = function checkClick(activeBeat, idx){  
     if (Util.dist(this.click, activeBeat.pos) < activeBeat.radius) {
+        this.clickAudio.play();
         let hitBeat = this.activeBeats.splice(idx, 1)[0];
         hitBeat.hitTime = this.lastTime;
         this.hitBeats.push(hitBeat)
         this.scoreHit(hitBeat);
-        this.clickAudio.play();
         this.updateCombo(idx);
+        this.updateHealth(hitBeat)
     }
 }
 
@@ -205,6 +208,24 @@ GameView.prototype.updateCombo = function updateCombo(idx){
     else{
         if(this.combo > this.maxCombo){ this.maxCombo = this.combo}
         this.combo = 0;
+    }
+}
+
+GameView.prototype.updateHealth = function updateHealth(hitBeat){
+    if(hitBeat.hitScore > 20 && this.health < 100){
+        upHealth = 2 * (hitBeat.hitScore/100)
+        this.health += Math.min(upHealth, 100-this.health)
+        console.log(this.health)
+    }
+    else{
+        this.health -= 5
+        console.log(this.health)
+    }
+    const finalScore = document.querySelector(".final-score-board")
+    if(this.health <= 0){
+        this.pauseGame();
+        this.scoreGame()
+        finalScore.classList.remove("hidden")
     }
 }
 
@@ -426,7 +447,10 @@ GameView.prototype.restartGame = function restartGame() {
     this.beatIdx = 0;
     this.activeBeats = [];
     this.hitBeats = [];
+    this.missedBeats = [];
+    this.health = 50;
     this.combo = 0;
+    this.maxCombo = 0;
     this.score = 0;
     this.restart = false;
     this.pause = false;
@@ -474,13 +498,13 @@ GameView.prototype.animate = function animate(time) {
 GameView.prototype.scoreGame = function scoreGame(){
     let maxScore = 0;
     let scoreRank;
-    const numBeats = this.game.beats.length;
+    const numBeats = this.hitBeats.length + this.missedBeats.length + this.activeBeats.length;
     let beatsA = 0;
     let beatsB = 0;
     let beatsC = 0;
     let beatsD = 0;
     let beatsF = 0;
-    this.game.beats.forEach(beat => {
+    this.hitBeats.concat(this.missedBeats).concat(this.activeBeats).forEach(beat => {
         maxScore += 100
         if (beat.type === "DRAG"){
             maxScore += 100
