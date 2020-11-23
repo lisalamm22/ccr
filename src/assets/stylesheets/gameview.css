@@ -29,10 +29,38 @@ body{
   right: 25%;
 }
 
+.health{
+  position: absolute;
+  top: 7%;
+  left: -1%;
+  width: 40%;
+  height: 25px;
+  background-color: white;
+  border-radius: 15px;
+}
+
+.health-bar{
+  position: relative;
+  top: 15%;
+  background-color: rgb(172, 128, 136);
+  width: 99%;
+  height: 70%;
+  border-radius: 15px;
+}
+
+.my-health{
+  position: relative;
+  top: -54%;
+  background-color: pink;
+  width: 50%;
+  height: 70%;
+  border-radius: 15px;
+}
+
 .final-score-board{
   position: absolute;
   width: 50vw;
-  height: 65vh;
+  height: 70vh;
   font-size: 25px;
   font-weight: bold;
   text-transform: uppercase;

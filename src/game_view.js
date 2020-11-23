@@ -150,6 +150,8 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers(){
     const replayButton = document.getElementById("replay-btn")
     replayButton.addEventListener("click", () => {
         finalScore.classList.add("hidden")
+        unpauseButton.classList.add("hidden");
+        pauseButton.classList.remove("hidden");
         this.restartGame();
     })
 
@@ -212,15 +214,28 @@ GameView.prototype.updateCombo = function updateCombo(idx){
 }
 
 GameView.prototype.updateHealth = function updateHealth(hitBeat){
-    if(hitBeat.hitScore > 20 && this.health < 100){
+    if(hitBeat.hitScore > 20){
         upHealth = 2 * (hitBeat.hitScore/100)
         this.health += Math.min(upHealth, 100-this.health)
-        console.log(this.health)
+        const myHealthPct = this.health * 0.97 + 2
+        anime({
+            targets:".my-health",
+            width:`${myHealthPct}%`,
+            easing: "easeInOutQuad",
+            direction: "normal",
+        })
     }
     else{
         this.health -= 5
-        console.log(this.health)
+        const myHealthPct = this.health * 0.97 + 2
+        anime({
+            targets:".my-health",
+            width:`${myHealthPct}%`,
+            easing: "easeInOutQuad",
+            direction: "normal",
+        })
     }
+
     const finalScore = document.querySelector(".final-score-board")
     if(this.health <= 0){
         this.pauseGame();

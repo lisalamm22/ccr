@@ -8182,7 +8182,6 @@ module.exports = Game;
   \**************************/
 /*! unknown exports (runtime-defined) */
 /*! runtime requirements: module, __webpack_require__ */
-/*! CommonJS bailout: module.exports is used directly at 562:0-14 */
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var Util = __webpack_require__(/*! ./util */ "./src/util.js");
@@ -8336,6 +8335,8 @@ GameView.prototype.bindKeyHandlers = function bindKeyHandlers() {
   var replayButton = document.getElementById("replay-btn");
   replayButton.addEventListener("click", function () {
     finalScore.classList.add("hidden");
+    unpauseButton.classList.add("hidden");
+    pauseButton.classList.remove("hidden");
 
     _this.restartGame();
   });
@@ -8404,13 +8405,27 @@ GameView.prototype.updateCombo = function updateCombo(idx) {
 };
 
 GameView.prototype.updateHealth = function updateHealth(hitBeat) {
-  if (hitBeat.hitScore > 20 && this.health < 100) {
+  if (hitBeat.hitScore > 20) {
     upHealth = 2 * (hitBeat.hitScore / 100);
     this.health += Math.min(upHealth, 100 - this.health);
-    console.log(this.health);
+    var myHealthPct = this.health * 0.97 + 2;
+    anime({
+      targets: ".my-health",
+      width: "".concat(myHealthPct, "%"),
+      easing: "easeInOutQuad",
+      direction: "normal"
+    });
   } else {
     this.health -= 5;
-    console.log(this.health);
+
+    var _myHealthPct = this.health * 0.97 + 2;
+
+    anime({
+      targets: ".my-health",
+      width: "".concat(_myHealthPct, "%"),
+      easing: "easeInOutQuad",
+      direction: "normal"
+    });
   }
 
   var finalScore = document.querySelector(".final-score-board");
@@ -9113,7 +9128,6 @@ document.addEventListener("DOMContentLoaded", function () {
   var finalScore = document.querySelector(".final-score-board");
   var scoreDoneButton = document.getElementById("score-done-btn");
   scoreDoneButton.addEventListener("click", function () {
-    volumeLvl = audioObj.volume * 100;
     finalScore.classList.add("hidden");
     startMenu.classList.add("hidden");
     songsMenu.classList.remove("hidden");
